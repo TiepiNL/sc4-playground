@@ -162,5 +162,5 @@ jobs:
         if: steps.check_files.outputs.patches_exist == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: maxis-blocker-${{ github.event.inputs.selection_mode == 'specific' && 'specific-selection' || 'all-combinations' }}${{ github.event.inputs.enable_datpack == 'true' && '-datpacked' || '-individual' }}
+          name: ${{ github.event.inputs.data_source == 'custom' && 'custom' || 'maxis' }}-blocker-${{ github.event.inputs.selection_mode == 'specific' && 'specific-selection' || 'all-combinations' }}${{ github.event.inputs.enable_datpack == 'true' && '-datpacked' || '-individual' }}
           path: output_patches/
