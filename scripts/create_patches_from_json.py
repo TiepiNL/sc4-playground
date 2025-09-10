@@ -58,9 +58,9 @@ def generate_custom_iid_base(lot_configurations: list) -> int:
     """
     import hashlib
     
-    # Your allocated custom prefix (close to Maxis range for organization)
-    CUSTOM_PREFIX = 0xfe7ce000  # ~140 slots after Maxis range end
-    CUSTOM_RANGE_SIZE = 0x1000  # 4096 possible hash slots
+    # Your allocated custom prefix - expanded range for collision resistance
+    CUSTOM_PREFIX = 0xfe700000  # 1MB allocation for hash distribution
+    CUSTOM_RANGE_SIZE = 0x100000  # 1,048,576 possible hash slots (52K building packs)
     
     # Collect all ExemplarPatchTargets for hashing
     hash_input = ""
