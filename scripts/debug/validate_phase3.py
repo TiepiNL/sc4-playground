@@ -19,24 +19,24 @@ import os
 def validate_property_structure(dbpf_file):
     """Validate Phase 3: Property Structure and Rep-Field Encoding"""
     
-    print("🧪 PHASE 3 VALIDATION: Property Structure & Rep-Field Encoding")
+    print("PHASE 3 VALIDATION: Property Structure & Rep-Field Encoding")
     print("=" * 70)
     print("Testing:")
-    print("  ✓ BIG-ENDIAN Rep field parsing")
-    print("  ✓ 3-byte padding validation")
-    print("  ✓ Type-specific parsing (UINT8, UINT16, UINT32, String)")
-    print("  ✓ Special UINT8 rep-field encoding pattern")
-    print("  ✓ Dynamic property search robustness")
-    print("  ✓ Edge case handling")
+    print("  * BIG-ENDIAN Rep field parsing")
+    print("  * 3-byte padding validation")
+    print("  * Type-specific parsing (UINT8, UINT16, UINT32, String)")
+    print("  * Special UINT8 rep-field encoding pattern")
+    print("  * Dynamic property search robustness")
+    print("  * Edge case handling")
     print()
     
     # Run the parser
     output_file = 'test_phase3_output.json'
-    cmd = f"python scripts/extract_maxis_lots.py {dbpf_file} {output_file}"
+    cmd = f"python ../extract_maxis_lots.py {dbpf_file} {output_file}"
     result = os.system(cmd)
     
     if result != 0:
-        print("❌ FAILED: Parser execution failed")
+        print("FAILED: Parser execution failed")
         return False
     
     # Load and validate the output
@@ -44,23 +44,23 @@ def validate_property_structure(dbpf_file):
         with open(output_file, 'r') as f:
             data = json.load(f)
         
-        print(f"✅ Parser executed successfully")
-        print(f"📊 Extracted {data['total_lot_configurations']} LotConfigurations")
+        print(f"Parser executed successfully")
+        print(f"Extracted {data['total_lot_configurations']} LotConfigurations")
         
         # Test 1: Validate known test cases
-        print(f"\n🎯 Test 1: Known Property Values")
+        print(f"\nTest 1: Known Property Values")
         
         # Test case 1: BIG-ENDIAN Rep field validation
         test_case_1 = next((entry for entry in data['lot_configurations'] if entry['iid'] == '0x6A63633B'), None)
         if test_case_1:
             zone_types = test_case_1['properties'].get('ZoneTypes', [])
             if zone_types == [15]:
-                print(f"   ✅ BIG-ENDIAN Rep field: ZoneTypes=[15] correct for {test_case_1['iid']}")
+                print(f"   BIG-ENDIAN Rep field: ZoneTypes=[15] correct for {test_case_1['iid']}")
             else:
-                print(f"   ❌ BIG-ENDIAN Rep field: ZoneTypes={zone_types} (expected [15])")
+                print(f"   BIG-ENDIAN Rep field: ZoneTypes={zone_types} (expected [15])")
                 return False
         else:
-            print(f"   ❌ Test case 0x6A63633B not found")
+            print(f"   Test case 0x6A63633B not found")
             return False
         
         # Test case 2: Rep-field encoding validation
@@ -79,17 +79,17 @@ def validate_property_structure(dbpf_file):
             if (exemplar_name == "CS$$1_5x4" and 
                 growth_stage == [1] and 
                 corner_indicator == [8]):
-                print(f"   ✅ Rep-field encoding: All values match sc4-reader exactly")
+                print(f"   Rep-field encoding: All values match sc4-reader exactly")
             else:
-                print(f"   ❌ Rep-field encoding: Values don't match expected")
+                print(f"   Rep-field encoding: Values don't match expected")
                 print(f"      Expected: ExemplarName='CS$$1_5x4', GrowthStage=[1], RoadCornerIndicator=[8]")
                 return False
         else:
-            print(f"   ❌ Test case 0x60004030 not found")
+            print(f"   Test case 0x60004030 not found")
             return False
         
         # Test 2: Statistical validation of rep-field properties
-        print(f"\n📈 Test 2: Rep-Field Properties Statistical Analysis")
+        print(f"\nTest 2: Rep-Field Properties Statistical Analysis")
         
         growth_stage_found = 0
         corner_indicator_found = 0
@@ -128,20 +128,20 @@ def validate_property_structure(dbpf_file):
         
         # Validate significant improvement from before the fix (was 0%)
         if growth_stage_found > 0 and corner_indicator_found > 0:
-            print(f"   ✅ Rep-field properties are being extracted (massive improvement from 0%)")
+            print(f"   Rep-field properties are being extracted (massive improvement from 0%)")
         else:
-            print(f"   ❌ Rep-field properties are still showing as null")
+            print(f"   Rep-field properties are still showing as null")
             return False
         
         # Validate reasonable extraction rates
         if gs_percentage > 50 and ci_percentage > 50:
-            print(f"   ✅ Extraction rates are significant (>50%)")
+            print(f"   Extraction rates are significant (>50%)")
         else:
-            print(f"   ⚠️  Extraction rates are lower than expected")
+            print(f"   Extraction rates are lower than expected")
             print(f"      This might be normal if not all lots have these properties")
         
         # Test 3: Data type validation
-        print(f"\n🔬 Test 3: Property Data Type Validation")
+        print(f"\nTest 3: Property Data Type Validation")
         
         type_errors = 0
         sample_size = min(100, total_entries)
@@ -172,13 +172,13 @@ def validate_property_structure(dbpf_file):
                         print(f"     Type error: {prop_name} should be int array, got {type(prop_value)}")
         
         if type_errors == 0:
-            print(f"   ✅ All extracted values have correct data types (sample of {sample_size})")
+            print(f"   All extracted values have correct data types (sample of {sample_size})")
         else:
-            print(f"   ❌ Found {type_errors} data type errors in sample")
+            print(f"   Found {type_errors} data type errors in sample")
             return False
         
         # Test 4: Property completeness validation
-        print(f"\n🧩 Test 4: Property Structure Completeness")
+        print(f"\nTest 4: Property Structure Completeness")
         
         expected_props = ['ExemplarName', 'ZoneTypes', 'ZoneWealth', 'ZonePurpose', 
                          'LotConfigPropertyLotObject', 'GrowthStage', 'RoadCornerIndicator']
@@ -193,22 +193,22 @@ def validate_property_structure(dbpf_file):
                     print(f"     Warning: Property {prop} missing from IID {entry['iid']}")
         
         if missing_props == 0:
-            print(f"   ✅ All expected properties present in sample entries")
+            print(f"   All expected properties present in sample entries")
         else:
-            print(f"   ❌ Found {missing_props} missing properties")
+            print(f"   Found {missing_props} missing properties")
             return False
         
         # Test 5: Value range validation
-        print(f"\n📏 Test 5: Property Value Range Validation")
+        print(f"\nTest 5: Property Value Range Validation")
         
         # Validate reasonable value ranges
         valid_gs_values = all(0 <= val <= 10 for val in growth_stage_values)  # Allow some flexibility
         valid_ci_values = all(0 <= val <= 20 for val in corner_indicator_values)  # Allow some flexibility
         
         if valid_gs_values and valid_ci_values:
-            print(f"   ✅ All rep-field values are in reasonable ranges")
+            print(f"   All rep-field values are in reasonable ranges")
         else:
-            print(f"   ❌ Some values are outside expected ranges")
+            print(f"   Some values are outside expected ranges")
             print(f"      GrowthStage values: {sorted(growth_stage_values)}")
             print(f"      RoadCornerIndicator values: {sorted(corner_indicator_values)}")
             return False
@@ -216,14 +216,14 @@ def validate_property_structure(dbpf_file):
         # Cleanup test file
         os.remove(output_file)
         
-        print(f"\n🎉 PHASE 3 VALIDATION PASSED")
-        print(f"✅ Property structure parsing is working correctly")
-        print(f"✅ Rep-field encoding fix is successful")
-        print(f"✅ All data types and value ranges are valid")
+        print(f"\nPHASE 3 VALIDATION PASSED")
+        print(f"Property structure parsing is working correctly")
+        print(f"Rep-field encoding fix is successful")
+        print(f"All data types and value ranges are valid")
         return True
         
     except Exception as e:
-        print(f"❌ Error validating output: {e}")
+        print(f"Error validating output: {e}")
         return False
 
 if __name__ == "__main__":
@@ -232,7 +232,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     if validate_property_structure(sys.argv[1]):
-        print("\n🎉 All Phase 3 validation tests passed!")
+        print("\nAll Phase 3 validation tests passed!")
     else:
-        print("\n❌ Phase 3 validation failed!")
+        print("\nPhase 3 validation failed!")
         sys.exit(1)
