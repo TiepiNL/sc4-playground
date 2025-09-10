@@ -203,6 +203,10 @@ def parse_zone_wealth_filters():
     parser.add_argument('--filter-i-high-tech', action='store_true', help='Include I-ht (Industrial High Tech)')
     parser.add_argument('--filter-i-resource', action='store_true', help='Include I-r (Industrial Resource/Raw Materials)')
     
+    # Datpack option
+    parser.add_argument('--datpack', action='store_true', help='Combine all generated .dat files into a single datpacked file')
+    parser.add_argument('--datpack-output', default='maxis_blockers_datpacked.dat', help='Name for the datpacked file (default: maxis_blockers_datpacked.dat)')
+    
     args = parser.parse_args()
     
     # If no filters are specified, include all combinations
@@ -215,7 +219,7 @@ def parse_zone_wealth_filters():
     ]
     
     if not any(filter_args):
-        return None  # No filters specified, include all
+        return None, args  # No filters specified, include all
     
     # Build the allowed combinations set
     allowed_combinations = set()
@@ -245,7 +249,7 @@ def parse_zone_wealth_filters():
     if args.filter_i_resource:
         allowed_combinations.add((5, 1))  # I-r$
     
-    return allowed_combinations
+    return allowed_combinations, args
 
 def main():
     """
@@ -259,9 +263,9 @@ def main():
     go into one patch file) to create manageable, organized patch files.
     """
     # Parse command-line filters
-    allowed_combinations = parse_zone_wealth_filters()
+    allowed_combinations, args = parse_zone_wealth_filters()
     
-    print("🏗️  SimCity 4 Exemplar Patch Generator")
+    print("SimCity 4 Exemplar Patch Generator")
     print("=====================================")
     
     if allowed_combinations is not None:
@@ -458,9 +462,60 @@ def main():
     print(f"\nPatch generation complete!")
     print(f"Generated {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'")
     
-    print(f"Install: Copy .dat files to your SimCity 4 Plugins folder")
-    print(f"Effect: Targeted Maxis lots will become unbuildable (RCI blocked)")
-    print(f"Requires: sc4-resource-loading-hooks.dll in Plugins folder")
+    # Datpack functionality
+    if args.datpack:
+        print(f"\nDatpacking enabled - combining files into single DBPF...")
+        
+        try:
+            # Import the datpack functionality
+            import subprocess
+            import sys
+            
+            # Ensure datpack output is in the output_patches directory
+            datpack_output = args.datpack_output
+            if not os.path.dirname(datpack_output):
+                datpack_output = os.path.join(OUTPUT_DIR, datpack_output)
+            
+            # Run the datpack script
+            datpack_cmd = [
+                sys.executable, 
+                'scripts/datpack_patches.py',
+                '--input', OUTPUT_DIR,
+                '--output', datpack_output,
+                '--remove-source'
+            ]
+            
+            print(f"   Running: {' '.join(datpack_cmd)}")
+            result = subprocess.run(datpack_cmd, cwd='.', capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print(f"Datpack successful!")
+                print(f"Single file output: {datpack_output}")
+                print(f"Original .dat files removed")
+                print(f"")
+                print(f"Install: Copy {datpack_output} to your SimCity 4 Plugins folder")
+                print(f"Effect: Combined functionality of all {len(grouped_targets)} patch files")
+                print(f"Requires: sc4-resource-loading-hooks.dll in Plugins folder")
+            else:
+                print(f"Datpack failed!")
+                print(f"Error: {result.stderr}")
+                print(f"")
+                print(f"Individual .dat files available in '{OUTPUT_DIR}/'")
+                print(f"Install: Copy .dat files to your SimCity 4 Plugins folder")
+                print(f"Effect: Targeted Maxis lots will become unbuildable (RCI blocked)")
+                print(f"Requires: sc4-resource-loading-hooks.dll in Plugins folder")
+                
+        except Exception as e:
+            print(f"Datpack failed: {e}")
+            print(f"Individual .dat files available in '{OUTPUT_DIR}/'")
+            print(f"Install: Copy .dat files to your SimCity 4 Plugins folder")
+            print(f"Effect: Targeted Maxis lots will become unbuildable (RCI blocked)")
+            print(f"Requires: sc4-resource-loading-hooks.dll in Plugins folder")
+    else:
+        print(f"")
+        print(f"Install: Copy .dat files to your SimCity 4 Plugins folder")
+        print(f"Effect: Targeted Maxis lots will become unbuildable (RCI blocked)")
+        print(f"Requires: sc4-resource-loading-hooks.dll in Plugins folder")
 
 if __name__ == "__main__":
     main()

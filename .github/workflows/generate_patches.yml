@@ -90,6 +90,12 @@ on:
         required: false
         default: false
         type: boolean
+      
+      enable_datpack:
+        description: 'Create single datpacked file (combines all .dat files)'
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: '0 2 * * 1'
 
@@ -136,6 +142,7 @@ jobs:
           ENABLE_I_MANUFACTURING: ${{ github.event.inputs.enable_i_manufacturing }}
           ENABLE_I_HIGH_TECH: ${{ github.event.inputs.enable_i_high_tech }}
           ENABLE_I_RESOURCE: ${{ github.event.inputs.enable_i_resource }}
+          ENABLE_DATPACK: ${{ github.event.inputs.enable_datpack }}
         run: |
           # Build command arguments based on selection mode and checkboxes
           if [ "$SELECTION_MODE" = "specific" ]; then
@@ -152,15 +159,24 @@ jobs:
             [ "$ENABLE_I_MANUFACTURING" = "true" ] && ARGS="$ARGS --filter-i-manufacturing"
             [ "$ENABLE_I_HIGH_TECH" = "true" ] && ARGS="$ARGS --filter-i-high-tech"
             [ "$ENABLE_I_RESOURCE" = "true" ] && ARGS="$ARGS --filter-i-resource"
+            
+            # Add datpack option if enabled
+            [ "$ENABLE_DATPACK" = "true" ] && ARGS="$ARGS --datpack --datpack-output maxis_blockers_specific.dat"
+            
             echo "Running with specific zone/wealth filters: $ARGS"
             python3 scripts/create_patches_from_json.py $ARGS
           else
+            ARGS=""
+            [ "$ENABLE_DATPACK" = "true" ] && ARGS="$ARGS --datpack --datpack-output maxis_blockers_all.dat"
+            
             echo "Running with all zone/wealth combinations (no filters)"
-            python3 scripts/create_patches_from_json.py
+            python3 scripts/create_patches_from_json.py $ARGS
           fi
       
       - name: Check for generated files
         id: check_files
+        env:
+          ENABLE_DATPACK: ${{ github.event.inputs.enable_datpack }}
         run: |
           if [ -z "$(ls -A output_patches 2>/dev/null)" ]; then
             echo "No patch files were generated."
@@ -168,10 +184,24 @@ jobs:
           else
             echo "Patch files generated successfully."
             echo "patches_exist=true" >> $GITHUB_OUTPUT
+            
+            # Check if datpack was enabled and set output accordingly
+            if [ "$ENABLE_DATPACK" = "true" ]; then
+              echo "datpack_enabled=true" >> $GITHUB_OUTPUT
+              if ls output_patches/*.dat | grep -q "maxis_blockers"; then
+                echo "Datpacked file found in output_patches/"
+              fi
+            else
+              echo "datpack_enabled=false" >> $GITHUB_OUTPUT
+            fi
+            
+            # List generated files for debugging
+            echo "Generated files:"
+            ls -la output_patches/
           fi
       - name: Upload .dat files artifact
         if: steps.check_files.outputs.patches_exist == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: maxis-blocker-dat-files-${{ github.event.inputs.selection_mode == 'specific' && 'specific-selection' || 'all-combinations' }}
+          name: maxis-blocker-${{ github.event.inputs.selection_mode == 'specific' && 'specific-selection' || 'all-combinations' }}${{ github.event.inputs.enable_datpack == 'true' && '-datpacked' || '-individual' }}
           path: output_patches/

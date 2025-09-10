@@ -12,4 +12,3 @@ data/SimCity_1.dat
 # Ignore generated output files and directories.
 # These are created by the scripts during the workflow run.
 output_patches/
-blocker-patches.zip
