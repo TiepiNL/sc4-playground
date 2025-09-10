@@ -8,6 +8,88 @@ on:
         required: true
         default: false
         type: boolean
+      
+      selection_mode:
+        description: 'Zone/Wealth Selection Mode'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'specific'
+      
+      # Zone/Wealth combination checkboxes (only used when selection_mode = 'specific')
+      enable_r_low:
+        description: 'R$ (Residential Low Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_r_med:
+        description: 'R$$ (Residential Medium Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_r_high:
+        description: 'R$$$ (Residential High Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_co_med:
+        description: 'CO$$ (Commercial Office Medium Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_co_high:
+        description: 'CO$$$ (Commercial Office High Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_cs_low:
+        description: 'CS$ (Commercial Service Low Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_cs_med:
+        description: 'CS$$ (Commercial Service Medium Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_cs_high:
+        description: 'CS$$$ (Commercial Service High Wealth)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_i_dirty:
+        description: 'I-D (Industrial Dirty)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_i_manufacturing:
+        description: 'I-M (Industrial Manufacturing)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_i_high_tech:
+        description: 'I-HT (Industrial High Tech)'
+        required: false
+        default: false
+        type: boolean
+      
+      enable_i_resource:
+        description: 'I-R (Industrial Resource/Raw Materials)'
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: '0 2 * * 1'
 
@@ -40,7 +122,42 @@ jobs:
         run: python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
       
       - name: Run script to create patch files from JSON
-        run: python3 scripts/create_patches_from_json.py
+        env:
+          SELECTION_MODE: ${{ github.event.inputs.selection_mode }}
+          ENABLE_R_LOW: ${{ github.event.inputs.enable_r_low }}
+          ENABLE_R_MED: ${{ github.event.inputs.enable_r_med }}
+          ENABLE_R_HIGH: ${{ github.event.inputs.enable_r_high }}
+          ENABLE_CO_MED: ${{ github.event.inputs.enable_co_med }}
+          ENABLE_CO_HIGH: ${{ github.event.inputs.enable_co_high }}
+          ENABLE_CS_LOW: ${{ github.event.inputs.enable_cs_low }}
+          ENABLE_CS_MED: ${{ github.event.inputs.enable_cs_med }}
+          ENABLE_CS_HIGH: ${{ github.event.inputs.enable_cs_high }}
+          ENABLE_I_DIRTY: ${{ github.event.inputs.enable_i_dirty }}
+          ENABLE_I_MANUFACTURING: ${{ github.event.inputs.enable_i_manufacturing }}
+          ENABLE_I_HIGH_TECH: ${{ github.event.inputs.enable_i_high_tech }}
+          ENABLE_I_RESOURCE: ${{ github.event.inputs.enable_i_resource }}
+        run: |
+          # Build command arguments based on selection mode and checkboxes
+          if [ "$SELECTION_MODE" = "specific" ]; then
+            ARGS=""
+            [ "$ENABLE_R_LOW" = "true" ] && ARGS="$ARGS --filter-r-low"
+            [ "$ENABLE_R_MED" = "true" ] && ARGS="$ARGS --filter-r-med"
+            [ "$ENABLE_R_HIGH" = "true" ] && ARGS="$ARGS --filter-r-high"
+            [ "$ENABLE_CO_MED" = "true" ] && ARGS="$ARGS --filter-co-med"
+            [ "$ENABLE_CO_HIGH" = "true" ] && ARGS="$ARGS --filter-co-high"
+            [ "$ENABLE_CS_LOW" = "true" ] && ARGS="$ARGS --filter-cs-low"
+            [ "$ENABLE_CS_MED" = "true" ] && ARGS="$ARGS --filter-cs-med"
+            [ "$ENABLE_CS_HIGH" = "true" ] && ARGS="$ARGS --filter-cs-high"
+            [ "$ENABLE_I_DIRTY" = "true" ] && ARGS="$ARGS --filter-i-dirty"
+            [ "$ENABLE_I_MANUFACTURING" = "true" ] && ARGS="$ARGS --filter-i-manufacturing"
+            [ "$ENABLE_I_HIGH_TECH" = "true" ] && ARGS="$ARGS --filter-i-high-tech"
+            [ "$ENABLE_I_RESOURCE" = "true" ] && ARGS="$ARGS --filter-i-resource"
+            echo "Running with specific zone/wealth filters: $ARGS"
+            python3 scripts/create_patches_from_json.py $ARGS
+          else
+            echo "Running with all zone/wealth combinations (no filters)"
+            python3 scripts/create_patches_from_json.py
+          fi
       
       - name: Check for generated files
         id: check_files
@@ -56,5 +173,5 @@ jobs:
         if: steps.check_files.outputs.patches_exist == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: maxis-blocker-dat-files
+          name: maxis-blocker-dat-files-${{ github.event.inputs.selection_mode == 'specific' && 'specific-selection' || 'all-combinations' }}
           path: output_patches/

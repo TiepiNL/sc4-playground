@@ -20,7 +20,7 @@ import json
 import struct
 import os
 import shutil # Import for directory operations
-import zipfile # Import for creating zip archives
+import argparse # Import for command-line argument parsing
 from collections import defaultdict
 
 # --- Configuration ---
@@ -185,6 +185,68 @@ def get_group_name_from_purpose_wealth(zone_purpose, zone_wealth):
     
     return f"{purpose_str}{wealth_str}"
 
+def parse_zone_wealth_filters():
+    """Parse command-line arguments for zone/wealth filtering."""
+    parser = argparse.ArgumentParser(description='Generate SimCity 4 exemplar patch files for RCI blocking')
+    
+    # Zone/wealth combination filters
+    parser.add_argument('--filter-r-low', action='store_true', help='Include R$ (Residential Low Wealth)')
+    parser.add_argument('--filter-r-med', action='store_true', help='Include R$$ (Residential Medium Wealth)')
+    parser.add_argument('--filter-r-high', action='store_true', help='Include R$$$ (Residential High Wealth)')
+    parser.add_argument('--filter-co-med', action='store_true', help='Include CO$$ (Commercial Office Medium Wealth)')
+    parser.add_argument('--filter-co-high', action='store_true', help='Include CO$$$ (Commercial Office High Wealth)')
+    parser.add_argument('--filter-cs-low', action='store_true', help='Include CS$ (Commercial Service Low Wealth)')
+    parser.add_argument('--filter-cs-med', action='store_true', help='Include CS$$ (Commercial Service Medium Wealth)')
+    parser.add_argument('--filter-cs-high', action='store_true', help='Include CS$$$ (Commercial Service High Wealth)')
+    parser.add_argument('--filter-i-dirty', action='store_true', help='Include I-d (Industrial Dirty)')
+    parser.add_argument('--filter-i-manufacturing', action='store_true', help='Include I-m (Industrial Manufacturing)')
+    parser.add_argument('--filter-i-high-tech', action='store_true', help='Include I-ht (Industrial High Tech)')
+    parser.add_argument('--filter-i-resource', action='store_true', help='Include I-r (Industrial Resource/Raw Materials)')
+    
+    args = parser.parse_args()
+    
+    # If no filters are specified, include all combinations
+    filter_args = [
+        args.filter_r_low, args.filter_r_med, args.filter_r_high,
+        args.filter_co_med, args.filter_co_high,
+        args.filter_cs_low, args.filter_cs_med, args.filter_cs_high,
+        args.filter_i_dirty, args.filter_i_manufacturing, 
+        args.filter_i_high_tech, args.filter_i_resource
+    ]
+    
+    if not any(filter_args):
+        return None  # No filters specified, include all
+    
+    # Build the allowed combinations set
+    allowed_combinations = set()
+    
+    if args.filter_r_low:
+        allowed_combinations.add((1, 1))  # R$
+    if args.filter_r_med:
+        allowed_combinations.add((1, 2))  # R$$
+    if args.filter_r_high:
+        allowed_combinations.add((1, 3))  # R$$$
+    if args.filter_co_med:
+        allowed_combinations.add((3, 2))  # CO$$
+    if args.filter_co_high:
+        allowed_combinations.add((3, 3))  # CO$$$
+    if args.filter_cs_low:
+        allowed_combinations.add((2, 1))  # CS$
+    if args.filter_cs_med:
+        allowed_combinations.add((2, 2))  # CS$$
+    if args.filter_cs_high:
+        allowed_combinations.add((2, 3))  # CS$$$
+    if args.filter_i_dirty:
+        allowed_combinations.add((6, 2))  # I-d$$
+    if args.filter_i_manufacturing:
+        allowed_combinations.add((7, 2))  # I-m$$
+    if args.filter_i_high_tech:
+        allowed_combinations.add((8, 3))  # I-ht$$$
+    if args.filter_i_resource:
+        allowed_combinations.add((5, 1))  # I-r$
+    
+    return allowed_combinations
+
 def main():
     """
     Main function to read JSON and generate exemplar patch files.
@@ -196,47 +258,60 @@ def main():
     Lots are grouped by ZonePurpose and ZoneWealth combinations (e.g., all "CS$$" lots
     go into one patch file) to create manageable, organized patch files.
     """
+    # Parse command-line filters
+    allowed_combinations = parse_zone_wealth_filters()
+    
     print("🏗️  SimCity 4 Exemplar Patch Generator")
     print("=====================================")
+    
+    if allowed_combinations is not None:
+        print(f"Zone/Wealth Filter: {len(allowed_combinations)} specific combinations selected")
+        filter_names = []
+        for purpose, wealth in sorted(allowed_combinations):
+            filter_names.append(get_group_name_from_purpose_wealth(purpose, wealth))
+        print(f"   Selected: {', '.join(filter_names)}")
+    else:
+        print("Zone/Wealth Filter: ALL combinations (no filter specified)")
+    
     print(f"Reading extracted data from {INPUT_JSON_PATH}")
     
     try:
         with open(INPUT_JSON_PATH, 'r') as f: 
             data = json.load(f)
     except FileNotFoundError:
-        print(f"❌ ERROR: Input file not found at '{INPUT_JSON_PATH}'.")
+        print(f"ERROR: Input file not found at '{INPUT_JSON_PATH}'.")
         print("   Run the extraction script first:")
         print("   python scripts/extract_maxis_lots.py data/SimCity_1.dat")
         return
     except json.JSONDecodeError as e:
-        print(f"❌ ERROR: Invalid JSON format in '{INPUT_JSON_PATH}': {e}")
+        print(f"ERROR: Invalid JSON format in '{INPUT_JSON_PATH}': {e}")
         return
 
     # Validate JSON structure
     if 'lot_configurations' not in data:
-        print(f"❌ ERROR: Expected 'lot_configurations' key in JSON file")
+        print(f"ERROR: Expected 'lot_configurations' key in JSON file")
         print("   Make sure the file was generated by extract_maxis_lots.py")
         return
     
     lot_configurations = data['lot_configurations']
-    print(f"📊 Found {len(lot_configurations)} LotConfigurations to process")
+    print(f"Found {len(lot_configurations)} LotConfigurations to process")
 
     # Clean output directory before starting
     if os.path.exists(OUTPUT_DIR):
-        print(f"🧹 Cleaning existing output directory: {OUTPUT_DIR}")
+        print(f"Cleaning existing output directory: {OUTPUT_DIR}")
         try:
             # Remove all .dat files in the directory
             for filename in os.listdir(OUTPUT_DIR):
                 if filename.endswith('.dat'):
                     filepath = os.path.join(OUTPUT_DIR, filename)
                     os.remove(filepath)
-            print(f"🗑️  Removed existing .dat files from {OUTPUT_DIR}")
+            print(f"Removed existing .dat files from {OUTPUT_DIR}")
         except Exception as e:
-            print(f"⚠️  Warning: Could not clean directory completely: {e}")
+            print(f"Warning: Could not clean directory completely: {e}")
     else:
         # Create output directory if it doesn't exist
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        print(f"📁 Created output directory: {OUTPUT_DIR}")
+        print(f"Created output directory: {OUTPUT_DIR}")
 
     # Group lots by ExemplarName pattern for organized patch files
     # Only process lots with valid ZoneTypes (excludes null and zones 10-15: Military/Airport/Seaport/Spaceport/Landmark/Civic)
@@ -323,6 +398,11 @@ def main():
         # This handles lots with multiple wealth values by adding them to multiple groups
         for purpose in purpose_values:
             for wealth in wealth_values:
+                # Apply zone/wealth filter if specified
+                if allowed_combinations is not None:
+                    if (purpose, wealth) not in allowed_combinations:
+                        continue  # Skip this combination as it's not in the filter
+                
                 group_name = get_group_name_from_purpose_wealth(purpose, wealth)
                 filename = f"{FILENAME_PREFIX}{group_name}.dat"
         
@@ -346,24 +426,24 @@ def main():
         valid_exemplars_found += 1
 
     # Report processing statistics
-    print(f"\n📈 Processing Statistics:")
-    print(f"   ✅ Valid exemplars: {valid_exemplars_found}")
-    print(f"   ⚠️  Skipped (invalid ZoneTypes): {skipped_invalid_zone_types}")
-    print(f"   ⚠️  Skipped (no ZonePurpose): {skipped_no_name}")
-    print(f"   ⚠️  Skipped (no ZoneWealth): {skipped_invalid_name}")
-    print(f"   ⚠️  Skipped (invalid Instance ID): {skipped_invalid_iid}")
+    print(f"\nProcessing Statistics:")
+    print(f"   Valid exemplars: {valid_exemplars_found}")
+    print(f"   Skipped (invalid ZoneTypes): {skipped_invalid_zone_types}")
+    print(f"   Skipped (no ZonePurpose): {skipped_no_name}")
+    print(f"   Skipped (no ZoneWealth): {skipped_invalid_name}")
+    print(f"   Skipped (invalid Instance ID): {skipped_invalid_iid}")
 
     if not grouped_targets:
-        print("\n❌ No valid groups to generate patch files for. Halting.")
+        print("\nNo valid groups to generate patch files for. Halting.")
         print("   Note: All lots may have been filtered out due to ZoneTypes restrictions.")
         print("   ZoneTypes filter excludes: null, 0x0A-0x0F (Military, Airport, Seaport, Spaceport, Landmark, Civic)")
         return
 
-    print(f"\n🚀 Generating {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'...")
-    print(f"📍 Using starting InstanceID: 0x{STARTING_INSTANCE_ID:08X}")
-    print(f"🎯 Target lots will have MinSlope set to 89.0° (unbuildable)")
-    print(f"📋 Grouping: By ZonePurpose + ZoneWealth (R/CS/CO/I-* + $/$$/$$$ combinations)")
-    print(f"📋 Filtering: ZoneTypes excluding null, 0x0A-0x0F (Military/Airport/Seaport/Spaceport/Landmark/Civic)")
+    print(f"\nGenerating {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'...")
+    print(f"Using starting InstanceID: 0x{STARTING_INSTANCE_ID:08X}")
+    print(f"Target lots will have MinSlope set to 89.0° (unbuildable)")
+    print(f"Grouping: By ZonePurpose + ZoneWealth (R/CS/CO/I-* + $/$$/$$$ combinations)")
+    print(f"Filtering: ZoneTypes excluding null, 0x0A-0x0F (Military/Airport/Seaport/Spaceport/Landmark/Civic)")
 
     # Generate patch files in alphabetical order for consistency
     sorted_filenames = sorted(grouped_targets.keys())
@@ -375,27 +455,12 @@ def main():
         write_patch_file(full_path, current_instance_id, targets)
         current_instance_id += 1
 
-    print(f"\n🎉 Patch generation complete!")
-    print(f"📁 Generated {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'")
+    print(f"\nPatch generation complete!")
+    print(f"Generated {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'")
     
-    # Create zip file containing all patch files
-    zip_filename = os.path.join(OUTPUT_DIR, "maxis_blockers.zip")
-    print(f"📦 Creating zip archive: {zip_filename}")
-    
-    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        # Add all .dat files to the zip
-        dat_files = [f for f in os.listdir(OUTPUT_DIR) if f.endswith('.dat')]
-        for dat_file in sorted(dat_files):
-            file_path = os.path.join(OUTPUT_DIR, dat_file)
-            zipf.write(file_path, dat_file)  # Store with just filename, not full path
-            print(f"  ✅ Added {dat_file}")
-    
-    zip_size = os.path.getsize(zip_filename)
-    print(f"📦 Created maxis_blockers.zip ({zip_size:,} bytes)")
-    
-    print(f"🎮 Install: Copy .dat files to your SimCity 4 Plugins folder")
-    print(f"💡 Effect: Targeted Maxis lots will become unbuildable (RCI blocked)")
-    print(f"🔧 Requires: sc4-resource-loading-hooks.dll in Plugins folder")
+    print(f"Install: Copy .dat files to your SimCity 4 Plugins folder")
+    print(f"Effect: Targeted Maxis lots will become unbuildable (RCI blocked)")
+    print(f"Requires: sc4-resource-loading-hooks.dll in Plugins folder")
 
 if __name__ == "__main__":
     main()
