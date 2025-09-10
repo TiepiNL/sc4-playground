@@ -8,6 +8,9 @@ __pycache__/
 # These are downloaded by the GitHub Action or placed here for local testing.
 data/SimCity_1.dat.zip
 data/SimCity_1.dat
+data/custom.zip
+data/custom/
+data/custom_lot_configurations.json
 
 # Ignore generated output files and directories.
 # These are created by the scripts during the workflow run.

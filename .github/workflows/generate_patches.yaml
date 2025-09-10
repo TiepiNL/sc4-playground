@@ -64,16 +64,27 @@ jobs:
           if [ "${{ env.DATA_SOURCE }}" = "custom" ]; then
             FILE_ID="${{ env.CUSTOM_FILE_ID }}"
             echo "Using custom Google Drive file ID: $FILE_ID"
+            echo "Downloading custom building pack archive..."
+            gdown --id "$FILE_ID" --fuzzy -O "data/custom.zip"
           else
             FILE_ID="${{ env.GDRIVE_FILE_ID }}"
             echo "Using default SimCity_1.dat file ID: $FILE_ID"
+            echo "Downloading SimCity_1.dat archive..."
+            gdown --id "$FILE_ID" --fuzzy -O "data/SimCity_1.dat.zip"
+            unzip "data/SimCity_1.dat.zip" -d data/
           fi
-          
-          gdown --id "$FILE_ID" --fuzzy -O "data/SimCity_1.dat.zip"
-          unzip "data/SimCity_1.dat.zip" -d data/
       
-      - name: Run script to extract data from .dat to JSON
-        run: python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
+      - name: Extract and process data
+        env:
+          DATA_SOURCE: ${{ github.event.inputs.data_source }}
+        run: |
+          if [ "$DATA_SOURCE" = "custom" ]; then
+            echo "Processing custom building packs..."
+            python3 scripts/process_custom_dbpf.py
+          else
+            echo "Processing Maxis base game data from SimCity_1.dat..."
+            python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
+          fi
       
       - name: Run script to create patch files from JSON
         env:

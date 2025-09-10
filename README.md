@@ -54,18 +54,34 @@ This project builds upon open-source SC4 community tools and follows their respe
 
 ### Scripts Overview
 
-- **`scripts/extract_maxis_lots.py`**: Main extraction script implementing the complete DBPF parsing pipeline
+- **`scripts/extract_maxis_lots.py`**: Main extraction script implementing the complete DBPF parsing pipeline for Maxis base game data
+- **`scripts/process_custom_dbpf.py`**: Processes custom building packs from zip archives containing SC4 files (.SC4Lot, .SC4Desc)
 - **`scripts/qfs.py`**: QFS (RefPack) decompression implementation for compressed exemplars  
-- **`scripts/create_patches_from_json.py`**: Patch creation utility with zone/wealth filtering and datpack support
+- **`scripts/create_patches_from_json.py`**: Patch creation utility with automatic data source detection, zone/wealth filtering and datpack support
 - **`scripts/datpack_patches.py`**: Combines multiple .dat files into a single DBPF file for easier installation
 
 
-### Running the Extraction
+### Data Source Support
+
+The system now supports two data sources with automatic detection:
+
+1. **Maxis Base Game Data** - Extracts from SimCity_1.dat
+2. **Custom Building Packs** - Processes user-provided building collections
+
+**Priority:** Custom data takes precedence when both are available.
+
+### Running the Scripts
 
 ```bash
-# Parse SimCity_1.dat (output: json)
+# === MAXIS BASE GAME DATA ===
+# Parse SimCity_1.dat (output: data/lot_configurations.json)
 python scripts/extract_maxis_lots.py data/SimCity_1.dat
 
+# === CUSTOM BUILDING PACKS ===
+# Process custom building packs (requires data/custom.zip)
+python scripts/process_custom_dbpf.py
+
+# === PATCH GENERATION (AUTO-DETECTS DATA SOURCE) ===
 # Create exemplar patches (all zone/wealth combinations)
 python scripts/create_patches_from_json.py
 
@@ -78,11 +94,14 @@ python scripts/create_patches_from_json.py --datpack
 # Create datpacked file with custom name
 python scripts/create_patches_from_json.py --datpack --datpack-output my_blockers.dat
 
+# === DATPACK UTILITIES ===
 # Combine existing .dat files into datpacked file
 python scripts/datpack_patches.py --input output_patches --output combined_blockers.dat
 ```
 
-Requires `SimCity_1.dat` in the `data/` directory (140MB+ file not included in repo).
+**Data Requirements:**
+- **Maxis data:** `SimCity_1.dat` in the `data/` directory (140MB+ file not included in repo)
+- **Custom data:** `custom.zip` containing building pack files in the `data/` directory
 
 ## Datpack Functionality
 
@@ -104,6 +123,50 @@ Create patches for specific RCI combinations using filter arguments:
 - **Industrial**: `--filter-i-resource`, `--filter-i-dirty`, `--filter-i-manufacturing`, `--filter-i-high-tech` (I-r$, I-d$$, I-m$$, I-ht$$$)
 
 If no filters are specified, all zone/wealth combinations are included.
+
+## GitHub Actions Workflow
+
+The repository includes an automated GitHub Actions workflow that generates and releases patch files:
+
+### Workflow Features
+
+- **Automated patch generation** from GitHub web interface
+- **Data source selection**: Choose between Maxis base game or custom building packs  
+- **Custom Google Drive integration**: Upload your own SimCity_1.dat or building pack archives
+- **Zone/wealth filtering**: Select specific RCI combinations using comma-separated values
+- **Automatic datpack creation**: Combines patches into single file for easy installation
+- **Release artifacts**: Downloads available immediately after workflow completion
+
+### Workflow Inputs
+
+1. **Data Source** (choice): 
+   - `maxis` - Use SimCity_1.dat base game data
+   - `custom` - Use custom building pack archive
+
+2. **Custom File ID** (string): Google Drive file ID when using custom data source
+
+3. **Selection Mode** (choice):
+   - `all` - Generate patches for all available zone/wealth combinations
+   - `specific` - Filter using zone/wealth combinations input
+
+4. **Zone/Wealth Combinations** (string): Comma-separated values like `R$$$,CO$$,I-ht$$$`
+
+5. **Enable Datpack** (boolean): Combine all patches into single file
+
+### Usage Example
+
+1. Go to **Actions** tab in GitHub repository
+2. Select **Generate SimCity 4 Exemplar Patches** workflow  
+3. Click **Run workflow**
+4. Configure inputs:
+   - Data Source: `custom`
+   - Custom File ID: `1ABC...XYZ` (your Google Drive file ID)
+   - Selection Mode: `specific`
+   - Zone/Wealth Combinations: `CO$$,R$$$,I-ht$$$`
+   - Enable Datpack: `true`
+5. Download generated files from workflow artifacts
+
+**Supported Zone/Wealth Values**: `R$`, `R$$`, `R$$$`, `CS$`, `CS$$`, `CS$$$`, `CO$$`, `CO$$$`, `I-r$`, `I-d$$`, `I-m$$`, `I-ht$$$`
 
 ## Documentation
 
