@@ -1,0 +1,22 @@
+name: Generate Blocker Patch Files (Debug)
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_source:
+        description: 'Data Source'
+        required: true
+        default: 'SimCity_1.dat'
+        type: choice
+        options:
+          - 'SimCity_1.dat'
+          - 'custom'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test basic functionality
+        run: |
+          echo "Data source selected: ${{ github.event.inputs.data_source }}"
+          echo "Workflow is running successfully!"
