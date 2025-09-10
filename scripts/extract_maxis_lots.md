@@ -89,7 +89,7 @@ Offset | Size | Field              | Description
 ## Layer 3: Property Structure (Critical Discovery)
 
 ### Property Header Format (13 bytes total)
-**BREAKTHROUGH:** The property structure uses a **BIG-ENDIAN Rep field** with **3-byte padding**.
+Important: The property structure uses a **BIG-ENDIAN Rep field** with **3-byte padding**.
 
 ```
 Offset | Size | Field      | Endianness | Description
@@ -97,21 +97,21 @@ Offset | Size | Field      | Endianness | Description
 0      | 4    | PropertyID | LE         | Property identifier
 4      | 2    | Type       | LE         | Data type (0x0100, 0x0200, etc.)
 6      | 2    | w8         | LE         | Unknown field
-8      | 2    | Rep        | BE ★       | Repeat count (BIG-ENDIAN!)
+8      | 2    | Rep        | BE         | Repeat count
 10     | 3    | Padding    | -          | Usually 3 zero bytes
 ```
 
 **Critical Implementation Detail:**
 ```python
 # CORRECT: Rep field is BIG-ENDIAN
-w_rep = struct.unpack('>H', data[offset+8:offset+10])[0]  # ★ BIG-ENDIAN
+w_rep = struct.unpack('>H', data[offset+8:offset+10])[0]
 
 # Value data starts after 13-byte header (10 + 3 padding)
 value_offset = offset + 10 + 3
 ```
 
 ### Special UINT8 Encoding Pattern (Major Discovery)
-**BREAKTHROUGH:** Certain UINT8 properties use a special encoding where the **value is stored in the Rep field itself**, not in the data section.
+Important: Certain UINT8 properties use a special encoding where the **value is stored in the Rep field itself**, not in the data section.
 
 **Affected Properties:**
 - `0x27812837` (GrowthStage) - Rep field contains growth stage value (0-3)
@@ -154,15 +154,15 @@ else:
 ## Layer 4: LotConfiguration Properties
 
 ### Target Property IDs
-| Property ID   | Name                    | Type    | Status | Purpose |
-|---------------|-------------------------|---------|--------|---------|
-| `0x00000020` | ExemplarName           | String  | ✅ Working | Lot name identifier |
-| `0x88EDC792` | LotConfigPropertyLotObject | UINT32 | ✅ Working | Lot object reference |
-| `0x88EDC793` | ZoneTypes              | UINT8   | ✅ Working | RCI zone compatibility |
-| `0x88EDC795` | ZoneWealth             | UINT8   | ✅ Working | Wealth level (§, §§, §§§) |
-| `0x88EDC796` | ZonePurpose            | UINT32  | ✅ Working | Purpose classification |
-| `0x27812837` | GrowthStage            | UINT8   | ✅ FIXED | Building stage (0-3) - **Rep-field encoded** |
-| `0x4A4A88F0` | RoadCornerIndicator    | UINT8   | ✅ FIXED | Corner lot indicator - **Rep-field encoded** |
+| Property ID   | Name                    | Type    | Purpose |
+|---------------|-------------------------|---------|---------|
+| `0x00000020` | ExemplarName           | String  | Lot name identifier |
+| `0x88EDC792` | LotConfigPropertyLotObject | UINT32 | Lot object reference |
+| `0x88EDC793` | ZoneTypes              | UINT8   | RCI zone compatibility |
+| `0x88EDC795` | ZoneWealth             | UINT8   | Wealth level (§, §§, §§§) |
+| `0x88EDC796` | ZonePurpose            | UINT32  | Purpose classification |
+| `0x27812837` | GrowthStage            | UINT8   | Building stage (0-3) - **Rep-field encoded** |
+| `0x4A4A88F0` | RoadCornerIndicator    | UINT8   | Corner lot indicator - **Rep-field encoded** |
 
 ### Property Search Method
 **Implementation:** Dynamic property location (not sequential parsing)
@@ -242,8 +242,6 @@ The extraction produces a JSON file (`data/lot_configurations.json`) with the fo
 - **Validation**: All entries pass structure validation tests
 
 ---
-
-## Validation Framework
 
 ## Validation Framework
 
