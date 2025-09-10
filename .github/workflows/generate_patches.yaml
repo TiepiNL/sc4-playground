@@ -26,78 +26,23 @@ on:
           - 'all'
           - 'specific'
       
-      # Zone/Wealth combination checkboxes (only used when selection_mode = 'specific')
-      enable_r_low:
-        description: 'R$ (Residential Low Wealth)'
+      zone_wealth_combinations:
+        description: 'Zone/Wealth Combinations (delete unwanted lines when using specific mode)'
         required: false
-        default: false
-        type: boolean
-      
-      enable_r_med:
-        description: 'R$$ (Residential Medium Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_r_high:
-        description: 'R$$$ (Residential High Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_co_med:
-        description: 'CO$$ (Commercial Office Medium Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_co_high:
-        description: 'CO$$$ (Commercial Office High Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_cs_low:
-        description: 'CS$ (Commercial Service Low Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_cs_med:
-        description: 'CS$$ (Commercial Service Medium Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_cs_high:
-        description: 'CS$$$ (Commercial Service High Wealth)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_i_dirty:
-        description: 'I-D (Industrial Dirty)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_i_manufacturing:
-        description: 'I-M (Industrial Manufacturing)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_i_high_tech:
-        description: 'I-HT (Industrial High Tech)'
-        required: false
-        default: false
-        type: boolean
-      
-      enable_i_resource:
-        description: 'I-R (Industrial Resource/Raw Materials)'
-        required: false
-        default: false
-        type: boolean
+        type: string
+        default: |
+          R$
+          R$$
+          R$$$
+          CO$$
+          CO$$$
+          CS$
+          CS$$
+          CS$$$
+          I-d
+          I-m
+          I-ht
+          I-r
       
       enable_datpack:
         description: 'Create single datpacked file (combines all .dat files)'
@@ -145,35 +90,35 @@ jobs:
       - name: Run script to create patch files from JSON
         env:
           SELECTION_MODE: ${{ github.event.inputs.selection_mode }}
-          ENABLE_R_LOW: ${{ github.event.inputs.enable_r_low }}
-          ENABLE_R_MED: ${{ github.event.inputs.enable_r_med }}
-          ENABLE_R_HIGH: ${{ github.event.inputs.enable_r_high }}
-          ENABLE_CO_MED: ${{ github.event.inputs.enable_co_med }}
-          ENABLE_CO_HIGH: ${{ github.event.inputs.enable_co_high }}
-          ENABLE_CS_LOW: ${{ github.event.inputs.enable_cs_low }}
-          ENABLE_CS_MED: ${{ github.event.inputs.enable_cs_med }}
-          ENABLE_CS_HIGH: ${{ github.event.inputs.enable_cs_high }}
-          ENABLE_I_DIRTY: ${{ github.event.inputs.enable_i_dirty }}
-          ENABLE_I_MANUFACTURING: ${{ github.event.inputs.enable_i_manufacturing }}
-          ENABLE_I_HIGH_TECH: ${{ github.event.inputs.enable_i_high_tech }}
-          ENABLE_I_RESOURCE: ${{ github.event.inputs.enable_i_resource }}
+          ZONE_WEALTH_COMBINATIONS: ${{ github.event.inputs.zone_wealth_combinations }}
           ENABLE_DATPACK: ${{ github.event.inputs.enable_datpack }}
         run: |
-          # Build command arguments based on selection mode and checkboxes
+          # Build command arguments based on selection mode
           if [ "$SELECTION_MODE" = "specific" ]; then
+            # Parse zone/wealth combinations from multi-line input
             ARGS=""
-            [ "$ENABLE_R_LOW" = "true" ] && ARGS="$ARGS --filter-r-low"
-            [ "$ENABLE_R_MED" = "true" ] && ARGS="$ARGS --filter-r-med"
-            [ "$ENABLE_R_HIGH" = "true" ] && ARGS="$ARGS --filter-r-high"
-            [ "$ENABLE_CO_MED" = "true" ] && ARGS="$ARGS --filter-co-med"
-            [ "$ENABLE_CO_HIGH" = "true" ] && ARGS="$ARGS --filter-co-high"
-            [ "$ENABLE_CS_LOW" = "true" ] && ARGS="$ARGS --filter-cs-low"
-            [ "$ENABLE_CS_MED" = "true" ] && ARGS="$ARGS --filter-cs-med"
-            [ "$ENABLE_CS_HIGH" = "true" ] && ARGS="$ARGS --filter-cs-high"
-            [ "$ENABLE_I_DIRTY" = "true" ] && ARGS="$ARGS --filter-i-dirty"
-            [ "$ENABLE_I_MANUFACTURING" = "true" ] && ARGS="$ARGS --filter-i-manufacturing"
-            [ "$ENABLE_I_HIGH_TECH" = "true" ] && ARGS="$ARGS --filter-i-high-tech"
-            [ "$ENABLE_I_RESOURCE" = "true" ] && ARGS="$ARGS --filter-i-resource"
+            
+            # Process each line of the zone/wealth combinations
+            echo "$ZONE_WEALTH_COMBINATIONS" | grep -v '^$' | while read -r combination; do
+              case "$combination" in
+                "R$") echo "--filter-r-low" ;;
+                "R$$") echo "--filter-r-med" ;;
+                "R$$$") echo "--filter-r-high" ;;
+                "CO$$") echo "--filter-co-med" ;;
+                "CO$$$") echo "--filter-co-high" ;;
+                "CS$") echo "--filter-cs-low" ;;
+                "CS$$") echo "--filter-cs-med" ;;
+                "CS$$$") echo "--filter-cs-high" ;;
+                "I-d") echo "--filter-i-dirty" ;;
+                "I-m") echo "--filter-i-manufacturing" ;;
+                "I-ht") echo "--filter-i-high-tech" ;;
+                "I-r") echo "--filter-i-resource" ;;
+              esac
+            done > /tmp/filter_args.txt
+            
+            # Read the generated arguments
+            FILTER_ARGS=$(cat /tmp/filter_args.txt | tr '\n' ' ')
+            ARGS="$FILTER_ARGS"
             
             # Add datpack option if enabled
             [ "$ENABLE_DATPACK" = "true" ] && ARGS="$ARGS --datpack --datpack-output maxis_blockers_specific.dat"
