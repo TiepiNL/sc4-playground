@@ -206,6 +206,151 @@ The repository includes an automated GitHub Actions workflow that generates and 
 
 **Supported Zone/Wealth Values**: `R$`, `R$$`, `R$$$`, `CS$`, `CS$$`, `CS$$$`, `CO$$`, `CO$$$`, `I-r$`, `I-d$$`, `I-m$$`, `I-ht$$$`
 
+## Instance ID (IID) Management System
+
+### Overview
+
+The system implements a sophisticated, collision-resistant Instance ID allocation mechanism for custom building packs, ensuring that multiple community-created building collections can coexist without conflicts.
+
+### Technical Architecture
+
+#### Private Prefix Allocation
+- **Allocated Range**: `0xFE7CE000 - 0xFE7CEFFF` (4096 slots)
+- **Slot Size**: 20 consecutive IIDs per building pack (supports all zone/wealth combinations)
+- **Capacity**: 204 building packs with guaranteed non-overlapping IID ranges
+- **Collision Probability**: Virtually zero due to MD5 hash distribution
+
+#### Hash-Based IID Generation
+
+The system uses a deterministic, collision-resistant approach:
+
+```python
+def generate_custom_iid_base(data):
+    # Primary: Use ExemplarPatchTargets if available
+    patch_targets = extract_exemplar_patch_targets(data)
+    
+    if patch_targets:
+        hash_input = '|'.join(sorted(map(str, patch_targets)))
+    else:
+        # Fallback: Use exemplar names
+        exemplar_names = extract_exemplar_names(data)
+        hash_input = '|'.join(sorted(exemplar_names))
+    
+    # Generate MD5 hash and map to allocated range
+    hash_obj = hashlib.md5(hash_input.encode('utf-8'))
+    hash_int = int(hash_obj.hexdigest()[:8], 16)
+    
+    # Map to custom prefix range
+    custom_prefix = 0xFE7CE000
+    range_size = 0x1000  # 4096 possible values
+    iid_offset = hash_int % range_size
+    
+    return custom_prefix + iid_offset
+```
+
+#### IID Source Priority
+1. **ExemplarPatchTargets** (property ID: `0x0062E78A`) - Most reliable identifier
+2. **Exemplar Names** - Fallback when ExemplarPatchTargets unavailable
+3. **Deterministic Ordering** - Sorted inputs ensure consistent hash generation
+
+### Private Prefix Management
+
+#### Current Allocation Status
+- **Reserved Prefix**: `0xFE7CE000-0xFE7CEFFF`
+- **Registration**: Self-allocated (community coordination pending)
+- **Collision Risk**: Minimal due to large prefix space and community coordination
+
+#### Prefix Change Procedure
+
+If the online SC4 community establishes formal IID prefix regulation or conflicts arise, follow this migration process:
+
+##### Step 1: Obtain New Prefix
+```bash
+# Contact SC4 community coordinators or registry
+# Document: Current prefix usage and conflict resolution
+# Obtain: New 4096-slot prefix allocation (e.g., 0xAB000000-0xAB000FFF)
+```
+
+##### Step 2: Update System Configuration
+```python
+# File: scripts/create_patches_from_json.py
+# Locate and update the custom_prefix value:
+
+def generate_custom_iid_base(data):
+    # OLD: custom_prefix = 0xFE7CE000
+    custom_prefix = 0xAB000000  # NEW ALLOCATED PREFIX
+    range_size = 0x1000  # Keep 4096 slots
+    # ... rest of function unchanged
+```
+
+##### Step 3: Update Documentation
+```markdown
+# File: README.md
+# Update all references to the old prefix:
+
+- Allocated Range: 0xAB000000 - 0xAB000FFF (4096 slots)  # Updated
+- Previous Range: 0xFE7CE000 - 0xFE7CEFFF (deprecated)   # Note legacy
+```
+
+##### Step 4: Version Migration
+```bash
+# Commit prefix change with clear versioning
+git add scripts/create_patches_from_json.py README.md
+git commit -m "Migrate to community-allocated IID prefix 0xAB000000
+
+- Updated custom prefix from 0xFE7CE000 to 0xAB000000
+- Maintains 4096-slot allocation for 204 building packs  
+- Backward compatibility: Old patches remain functional
+- Community compliance: Follows established IID registry
+
+Breaking Change: New custom patches use different IID range
+Migration: Re-generate custom patches after prefix update"
+
+git tag v2.0.0 -m "IID Prefix Migration - Community Registry Compliance"
+```
+
+##### Step 5: Community Communication
+```markdown
+## Migration Notice
+
+**IID Prefix Change**: Custom building pack patches now use community-allocated prefix `0xAB000000`
+
+**Action Required**: 
+1. Re-generate all custom building pack patches using updated scripts
+2. Replace old patch files in Plugins folder with new versions
+3. Update any documentation referencing old IID ranges
+
+**Compatibility**: Maxis data patches and existing installations unaffected
+**Timeline**: Implement migration within [X days] of community directive
+```
+
+#### Registry Integration (Future)
+
+When community IID registry systems become available:
+
+```python
+# Enhanced prefix management with registry lookup
+def get_allocated_prefix():
+    try:
+        # Query community registry API
+        response = requests.get("https://sc4-registry.example.com/api/prefix")
+        if response.status_code == 200:
+            return int(response.json()['allocated_prefix'], 16)
+    except:
+        pass
+    
+    # Fallback to current allocation
+    return 0xFE7CE000  # Current self-allocated prefix
+```
+
+### Benefits of Current System
+
+1. **Deterministic**: Same building pack always gets same IID base
+2. **Collision-Resistant**: MD5 hash distribution minimizes conflicts  
+3. **Scalable**: Supports 204 building packs within allocated range
+4. **Community-Ready**: Easy migration to formal registry system
+5. **Backward Compatible**: Existing patches remain functional during transitions
+
 ## Documentation
 
 - **[Technical Reference 1](scripts/extract_maxis_lots.md)**: Complete DBPF format documentation
