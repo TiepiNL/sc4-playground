@@ -31,7 +31,7 @@ from extract_maxis_lots import parse_lot_configuration_corrected
 CUSTOM_ZIP_PATH = "data/custom.zip"
 CUSTOM_EXTRACT_DIR = "data/custom"
 CUSTOM_OUTPUT_JSON = "data/custom_lot_configurations.json"
-LOT_CONFIG_TYPE_ID = 0x6534284A  # LotConfiguration exemplar type
+EXEMPLAR_FILE_TYPE_ID = 0x6534284A  # DBPF file type for exemplar files
 LOT_CONFIG_GROUP_ID = 0xA8FBD372  # LotConfiguration group ID
 
 def extract_custom_zip():
@@ -107,15 +107,15 @@ def extract_lot_configurations_from_dbpf(file_path):
         
         lot_config_count = 0
         
-        # Process each entry looking for LotConfigurations
+        # Process each entry looking for exemplar files
         for i in range(index_entry_count):
             entry_offset = index_location + i * 20
             tid = struct.unpack('<I', data[entry_offset:entry_offset+4])[0]
             gid = struct.unpack('<I', data[entry_offset+4:entry_offset+8])[0]
             iid = struct.unpack('<I', data[entry_offset+8:entry_offset+12])[0]
             
-            # Filter for LotConfiguration entries
-            if tid == LOT_CONFIG_TYPE_ID and gid == LOT_CONFIG_GROUP_ID:
+            # Filter for exemplar files with the correct group ID
+            if tid == EXEMPLAR_FILE_TYPE_ID and gid == LOT_CONFIG_GROUP_ID:
                 size = struct.unpack('<I', data[entry_offset+16:entry_offset+20])[0]
                 location = struct.unpack('<I', data[entry_offset+12:entry_offset+16])[0]
                 

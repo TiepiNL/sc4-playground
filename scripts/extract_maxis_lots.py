@@ -60,8 +60,11 @@ def parse_property_corrected(data, offset):
         
         # For most properties, require valid padding
         # EXCEPTION: GrowthStage and RoadCornerIndicator use rep field encoding
+        # EXCEPTION: Properties with rep=0 may have different padding patterns
         requires_padding = dw_desc not in [0x00000020, 0x27812837, 0x4A4A88F0]
-        if requires_padding and not padding_valid:
+        if requires_padding and not padding_valid and w_rep > 0:
+            # Only require valid padding for properties with rep > 0
+            # rep=0 properties may have different padding due to dual-track encoding
             return None
         
         # Extract values based on property type and rep count
@@ -166,27 +169,28 @@ def validate_property_structure(prop, prop_name):
     
     elif prop_name in ['ZoneTypes', 'ZoneWealth', 'ZonePurpose']:
         # These should be UINT8 arrays with reasonable counts
-        if prop_type == '0x0100' and 1 <= rep_count <= 20:  # More permissive
+        # rep=0 means empty array (valid case)
+        if prop_type == '0x0100' and 0 <= rep_count <= 20:  # Allow rep=0 for empty arrays
             return True
-        elif prop_type == '0x0300' and 1 <= rep_count <= 10:  # UINT32 arrays also possible
+        elif prop_type == '0x0300' and 0 <= rep_count <= 10:  # UINT32 arrays also possible
             return True
         return False
     
     elif prop_name == 'GrowthStage':
         # GrowthStage should be UINT8, allow broader range for now
-        if prop_type == '0x0100' and 1 <= rep_count <= 5:  # More permissive
+        if prop_type == '0x0100' and 0 <= rep_count <= 5:  # Allow rep=0 for empty/missing values
             return True
         return False
     
     elif prop_name == 'RoadCornerIndicator':
         # Should be UINT8 array - be more permissive about values
-        if prop_type == '0x0100' and 1 <= rep_count <= 10:
+        if prop_type == '0x0100' and 0 <= rep_count <= 10:  # Allow rep=0 for empty arrays
             return True
         return False
     
     elif prop_name == 'LotConfigPropertyLotObject':
         # Should be UINT32 array
-        if prop_type == '0x0300' and 1 <= rep_count <= 10:
+        if prop_type == '0x0300' and 0 <= rep_count <= 10:  # Allow rep=0 for empty arrays
             return True
         return False
     
@@ -235,8 +239,14 @@ def parse_lot_configuration_corrected(eqzb_data):
                     search_start = prop_pos + 1
                     
             if prop_name not in properties:
-                # Property not found - this is OK, not all lots have all properties
-                properties[prop_name] = None
+                # Property not found in binary search
+                # In custom DBPF files, rep=0 properties may be encoded differently
+                # and not found by direct binary search. Based on SC4 standards,
+                # missing zone properties should default to empty arrays, not None
+                if prop_name in ['ZoneTypes', 'ZoneWealth', 'ZonePurpose', 'GrowthStage', 'LotConfigPropertyLotObject']:
+                    properties[prop_name] = []  # Empty array for rep=0 properties
+                else:
+                    properties[prop_name] = None  # Keep None for truly optional properties
                 
         except Exception as e:
             print(f"Error searching for property {prop_name} (0x{prop_id:08X}): {e}")

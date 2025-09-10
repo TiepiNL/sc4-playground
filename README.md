@@ -6,26 +6,51 @@ A robust parser for extracting LotConfigurations data from SimCity 4 DBPF files,
 ## Mission Accomplished
 Successfully extracted **1,908 LotConfigurations entries** from SimCity_1.dat with accurate property parsing.
 
+## Custom Building Pack Support
+
+The parser now supports **dual-track processing** for both Maxis base game data and custom building packs with enhanced property handling:
+
+### Key Improvements
+- **Rep=0 Property Handling**: Correctly processes properties with zero repetitions as empty arrays `[]` instead of `None`
+- **Dual-Track Logic**: Handles both Maxis data (rep≥1) and custom data (rep=0) property encodings
+- **Custom ZIP Processing**: Extracts and processes custom building packs from ZIP archives
+- **Property Validation**: Enhanced validation logic that accommodates different property encoding patterns
+
+### Supported Custom Formats
+- **Building Pack ZIP files** containing `.dat`, `.SC4Lot`, `.SC4Desc` files
+- **Multiple DBPF files** in single archive (recursive scanning)
+- **QFS compressed exemplars** with automatic decompression
+- **Various property encodings** including rep=0 empty arrays
+
+### Technical Achievement
+Custom building packs often use **different property encoding** than Maxis data:
+- **Maxis encoding**: Properties typically have rep≥1 with actual values
+- **Custom encoding**: Properties may have rep=0 indicating empty arrays rather than missing properties
+- **Our solution**: Implemented dual-track parsing that correctly handles both encoding patterns
+
 ## Features
 - Complete DBPF file parsing with QFS decompression support
 - EQZB container parsing with correct header handling  
-- Property structure parsing
+- Property structure parsing with dual-track rep handling
+- **Custom Building Pack Support** - Process user-provided building collections with rep=0 property handling
 - Dynamic property search (handles missing properties gracefully)
 - Comprehensive validation and regression testing framework
 - **Zone/Wealth filtering** - Generate patches for specific RCI combinations
 - **Datpack functionality** - Combine multiple .dat files into single DBPF for easier installation
+- **Dual-track rep handling** - Correctly processes both rep≥1 (arrays with values) and rep=0 (empty arrays) properties
 - Support for key LotConfiguration properties:
   - ExemplarName (0x88EDC790) - String
-  - ZoneTypes (0x88EDC793) - UINT8 array
-  - ZoneWealth (0x88EDC795) - UINT8 array  
-  - ZonePurpose (0x88EDC796) - UINT8 array
+  - ZoneTypes (0x88EDC793) - UINT8 array (supports rep=0 and rep≥1)
+  - ZoneWealth (0x88EDC795) - UINT8 array (supports rep=0 and rep≥1)
+  - ZonePurpose (0x88EDC796) - UINT8 array (supports rep=0 and rep≥1)
   - GrowthStage (0x27812837) - UINT8, Rep=0
   - RoadCornerIndicator (0x4A4A88F0) - UINT8, Rep=0
 
 ## Technical Approach
 
-This project used a systematic, expert-level approach:
+This project used a systematic, expert-level approach with dual-track support:
 
+### Core Implementation
 1. DBPF File Structure + LotConfiguration Filtering ✅
 2. EQZB Container Parsing + Property Location ✅  
 3. Property Structure Parsing ✅
@@ -33,7 +58,13 @@ This project used a systematic, expert-level approach:
 5. Complete Extraction ✅
 6. Validation & Regression Testing ✅
 
-Each layer was validated before proceeding, with regression tests preventing breakage of working components.
+### Custom Building Pack Extensions
+7. **Custom DBPF Processing** ✅ - ZIP archive extraction and multi-file scanning
+8. **Dual-Track Rep Handling** ✅ - Enhanced property parsing for rep=0 vs rep≥1 encodings
+9. **Property Validation Enhancement** ✅ - Adaptive validation for different encoding patterns
+10. **Cross-Format Compatibility** ✅ - Unified processing pipeline for both Maxis and custom data
+
+Each layer was validated before proceeding, with regression tests preventing breakage of working components. The dual-track implementation ensures compatibility with both official Maxis content and community-created building packs.
 
 ## References
 
@@ -55,10 +86,17 @@ This project builds upon open-source SC4 community tools and follows their respe
 ### Scripts Overview
 
 - **`scripts/extract_maxis_lots.py`**: Main extraction script implementing the complete DBPF parsing pipeline for Maxis base game data
-- **`scripts/process_custom_dbpf.py`**: Processes custom building packs from zip archives containing SC4 files (.SC4Lot, .SC4Desc)
+- **`scripts/process_custom_dbpf.py`**: Processes custom building packs from zip archives containing SC4 files (.SC4Lot, .SC4Desc, .dat) with dual-track rep=0 property handling
 - **`scripts/qfs.py`**: QFS (RefPack) decompression implementation for compressed exemplars  
 - **`scripts/create_patches_from_json.py`**: Patch creation utility with automatic data source detection, zone/wealth filtering and datpack support
 - **`scripts/datpack_patches.py`**: Combines multiple .dat files into a single DBPF file for easier installation
+
+### Key Technical Features
+
+- **Dual-Track Property Parsing**: Handles both Maxis (rep≥1) and custom (rep=0) property encodings
+- **Adaptive Validation**: Enhanced property validation that accommodates different encoding patterns  
+- **Rep=0 Handling**: Correctly processes properties with zero repetitions as empty arrays `[]`
+- **Cross-Format Compatibility**: Unified processing pipeline for official and community content
 
 
 ### Data Source Support
