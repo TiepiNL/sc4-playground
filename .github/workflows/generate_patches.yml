@@ -3,11 +3,19 @@ name: Generate Blocker Patch Files
 on:
   workflow_dispatch:
     inputs:
-      debug_mode:
-        description: 'Run with verbose parser logging'
+      data_source:
+        description: 'Data Source'
         required: true
-        default: false
-        type: boolean
+        default: 'SimCity_1.dat'
+        type: choice
+        options:
+          - 'SimCity_1.dat'
+          - 'custom'
+      
+      custom_file_id:
+        description: 'Custom Google Drive File ID (only used when data_source = custom)'
+        required: false
+        type: string
       
       selection_mode:
         description: 'Zone/Wealth Selection Mode'
@@ -96,11 +104,11 @@ on:
         required: false
         default: false
         type: boolean
-  schedule:
-    - cron: '0 2 * * 1'
 
 env:
   GDRIVE_FILE_ID: ${{ vars.GZ_FILE_ID }}
+  CUSTOM_FILE_ID: ${{ github.event.inputs.custom_file_id }}
+  DATA_SOURCE: ${{ github.event.inputs.data_source }}
   STARTING_INSTANCE_ID: ${{ vars.STARTING_INSTANCE_ID }}
   DAT_FILENAME: 'SimCity_1.dat'
 
@@ -116,15 +124,22 @@ jobs:
         id: cache-simcity-dat
         with:
           path: data/${{ env.DAT_FILENAME }}
-          key: ${{ runner.os }}-simcity-dat-${{ env.GDRIVE_FILE_ID }}
+          key: ${{ runner.os }}-simcity-dat-${{ env.DATA_SOURCE == 'custom' && env.CUSTOM_FILE_ID || env.GDRIVE_FILE_ID }}
       - if: steps.cache-simcity-dat.outputs.cache-hit != 'true'
         run: |
-          gdown --id ${{ env.GDRIVE_FILE_ID }} --fuzzy -O "data/SimCity_1.dat.zip"
+          # Determine which file ID to use based on data source selection
+          if [ "${{ env.DATA_SOURCE }}" = "custom" ]; then
+            FILE_ID="${{ env.CUSTOM_FILE_ID }}"
+            echo "Using custom Google Drive file ID: $FILE_ID"
+          else
+            FILE_ID="${{ env.GDRIVE_FILE_ID }}"
+            echo "Using default SimCity_1.dat file ID: $FILE_ID"
+          fi
+          
+          gdown --id "$FILE_ID" --fuzzy -O "data/SimCity_1.dat.zip"
           unzip "data/SimCity_1.dat.zip" -d data/
       
       - name: Run script to extract data from .dat to JSON
-        env:
-          DEBUG_MODE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_mode) || 'true' }}
         run: python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
       
       - name: Run script to create patch files from JSON
