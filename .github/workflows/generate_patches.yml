@@ -1,0 +1,60 @@
+name: Generate Blocker Patch Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: 'Run with verbose parser logging'
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: '0 2 * * 1'
+
+env:
+  GDRIVE_FILE_ID: ${{ vars.GZ_FILE_ID }}
+  STARTING_INSTANCE_ID: ${{ vars.STARTING_INSTANCE_ID }}
+  DAT_FILENAME: 'SimCity_1.dat'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: { python-version: '3.x' }
+      - run: pip install gdown
+      - uses: actions/cache@v4
+        id: cache-simcity-dat
+        with:
+          path: data/${{ env.DAT_FILENAME }}
+          key: ${{ runner.os }}-simcity-dat-${{ env.GDRIVE_FILE_ID }}
+      - if: steps.cache-simcity-dat.outputs.cache-hit != 'true'
+        run: |
+          gdown --id ${{ env.GDRIVE_FILE_ID }} --fuzzy -O "data/SimCity_1.dat.zip"
+          unzip "data/SimCity_1.dat.zip" -d data/
+      
+      - name: Run script to extract data from .dat to JSON
+        env:
+          DEBUG_MODE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.debug_mode) || 'true' }}
+        run: python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
+      
+      - name: Run script to create patch files from JSON
+        run: python3 scripts/create_patches_from_json.py
+      
+      - name: Check for generated files
+        id: check_files
+        run: |
+          if [ -z "$(ls -A output_patches 2>/dev/null)" ]; then
+            echo "No patch files were generated."
+            echo "patches_exist=false" >> $GITHUB_OUTPUT
+          else
+            echo "Patch files generated successfully."
+            echo "patches_exist=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Upload .dat files artifact
+        if: steps.check_files.outputs.patches_exist == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maxis-blocker-dat-files
+          path: output_patches/

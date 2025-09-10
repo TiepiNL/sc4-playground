@@ -1,0 +1,15 @@
+# Python specific files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Large local data files that are not meant for the repository.
+# These are downloaded by the GitHub Action or placed here for local testing.
+data/SimCity_1.dat.zip
+data/SimCity_1.dat
+
+# Ignore generated output files and directories.
+# These are created by the scripts during the workflow run.
+output_patches/
+blocker-patches.zip
