@@ -43,6 +43,73 @@ except (ValueError, TypeError):
     print("Warning: Invalid STARTING_INSTANCE_ID format. Using default.")
     STARTING_INSTANCE_ID = 0xfe7cd975
 
+def generate_custom_iid_base(lot_configurations: list) -> int:
+    """
+    Generate a unique IID base for custom building packs using ExemplarPatchTargets hash.
+    
+    This ensures different building packs get different IID ranges while maintaining
+    reproducibility for the same building pack. Uses your allocated custom prefix.
+    
+    Args:
+        lot_configurations: List of lot configuration dictionaries
+        
+    Returns:
+        int: Starting IID for this specific building pack
+    """
+    import hashlib
+    
+    # Your allocated custom prefix (close to Maxis range for organization)
+    CUSTOM_PREFIX = 0xfe7ce000  # ~140 slots after Maxis range end
+    CUSTOM_RANGE_SIZE = 0x1000  # 4096 possible hash slots
+    
+    # Collect all ExemplarPatchTargets for hashing
+    hash_input = ""
+    target_count = 0
+    
+    for config in lot_configurations:
+        # Look for ExemplarPatchTargets (0x0062E78A) which defines what this cohort patches
+        properties = config.get('properties', {})
+        
+        # Check various possible property names for patch targets
+        patch_targets = None
+        for prop_name in ['ExemplarPatchTargets', 'exemplar_patch_targets', 'patch_targets']:
+            if prop_name in properties and properties[prop_name]:
+                patch_targets = properties[prop_name]
+                break
+        
+        if patch_targets:
+            # Convert to string for hashing (handle both single values and arrays)
+            if isinstance(patch_targets, list):
+                hash_input += ''.join(f"{target:08X}" for target in patch_targets)
+                target_count += len(patch_targets)
+            else:
+                hash_input += f"{patch_targets:08X}"
+                target_count += 1
+    
+    if not hash_input:
+        print("Warning: No ExemplarPatchTargets found in building pack.")
+        print("         Using fallback hash based on exemplar names.")
+        # Fallback: use exemplar names if no patch targets found
+        for config in lot_configurations[:10]:  # Limit for performance
+            name = config.get('properties', {}).get('ExemplarName', '')
+            if name:
+                hash_input += name
+    
+    # Generate MD5 hash and map to custom range
+    hash_obj = hashlib.md5(hash_input.encode()).hexdigest()
+    hash_value = int(hash_obj[:8], 16)  # Use first 8 hex characters
+    
+    # Map to your allocated custom range
+    base_iid = CUSTOM_PREFIX + (hash_value % CUSTOM_RANGE_SIZE)
+    
+    print(f"Custom IID generation:")
+    print(f"  Building pack targets: {target_count} unique patch targets")
+    print(f"  Hash input length: {len(hash_input)} characters")
+    print(f"  Generated base IID: 0x{base_iid:08X}")
+    print(f"  IID range: 0x{base_iid:08X} - 0x{base_iid + 20:08X} (up to 20 zone/wealth combinations)")
+    
+    return base_iid
+
 def write_patch_file(filename: str, patch_instance_id: int, targets: list):
     """
     Writes a binary-correct DBPF file containing a Cohort Exemplar Patch.
@@ -338,6 +405,15 @@ def main():
     
     lot_configurations = data['lot_configurations']
     print(f"Found {len(lot_configurations)} LotConfigurations to process")
+    
+    # For custom building packs, generate unique IID base from ExemplarPatchTargets
+    is_custom_data = (input_json_path == CUSTOM_JSON_PATH)
+    if is_custom_data:
+        custom_starting_iid = generate_custom_iid_base(lot_configurations)
+        print(f"Custom building pack detected - using generated IID base: 0x{custom_starting_iid:08X}")
+        # Override the environment variable for this run
+        global STARTING_INSTANCE_ID
+        STARTING_INSTANCE_ID = custom_starting_iid
 
     # Clean output directory before starting
     if os.path.exists(OUTPUT_DIR):

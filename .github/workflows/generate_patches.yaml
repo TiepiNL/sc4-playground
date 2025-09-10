@@ -42,8 +42,8 @@ env:
   GDRIVE_FILE_ID: ${{ vars.GZ_FILE_ID }}
   CUSTOM_FILE_ID: ${{ github.event.inputs.custom_file_id }}
   DATA_SOURCE: ${{ github.event.inputs.data_source }}
-  # Use different IID ranges for Maxis vs Custom to avoid conflicts
-  STARTING_INSTANCE_ID: ${{ github.event.inputs.data_source == 'custom' && vars.STARTING_CUSTOM_IID || vars.STARTING_MAXIS_IID }}
+  # For Maxis: use repository variable. For Custom: dynamically generated from content hash
+  STARTING_INSTANCE_ID: ${{ vars.STARTING_MAXIS_IID }}
   DAT_FILENAME: 'SimCity_1.dat'
 
 jobs:
