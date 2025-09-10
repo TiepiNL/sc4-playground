@@ -27,22 +27,10 @@ on:
           - 'specific'
       
       zone_wealth_combinations:
-        description: 'Zone/Wealth Combinations (delete unwanted lines when using specific mode)'
+        description: 'Zone/Wealth Combinations (comma-separated, remove unwanted when using specific mode)'
         required: false
         type: string
-        default: |
-          R$
-          R$$
-          R$$$
-          CO$$
-          CO$$$
-          CS$
-          CS$$
-          CS$$$
-          I-d
-          I-m
-          I-ht
-          I-r
+        default: 'R$,R$$,R$$$,CO$$,CO$$$,CS$,CS$$,CS$$$,I-d,I-m,I-ht,I-r'
       
       enable_datpack:
         description: 'Create single datpacked file (combines all .dat files)'
@@ -95,30 +83,30 @@ jobs:
         run: |
           # Build command arguments based on selection mode
           if [ "$SELECTION_MODE" = "specific" ]; then
-            # Parse zone/wealth combinations from multi-line input
+            # Parse zone/wealth combinations from comma-separated input
             ARGS=""
             
-            # Process each line of the zone/wealth combinations
-            echo "$ZONE_WEALTH_COMBINATIONS" | grep -v '^$' | while read -r combination; do
+            # Split comma-separated combinations and convert to filter arguments
+            IFS=',' read -ra COMBINATIONS <<< "$ZONE_WEALTH_COMBINATIONS"
+            for combination in "${COMBINATIONS[@]}"; do
+              # Trim whitespace
+              combination=$(echo "$combination" | xargs)
+              
               case "$combination" in
-                "R$") echo "--filter-r-low" ;;
-                "R$$") echo "--filter-r-med" ;;
-                "R$$$") echo "--filter-r-high" ;;
-                "CO$$") echo "--filter-co-med" ;;
-                "CO$$$") echo "--filter-co-high" ;;
-                "CS$") echo "--filter-cs-low" ;;
-                "CS$$") echo "--filter-cs-med" ;;
-                "CS$$$") echo "--filter-cs-high" ;;
-                "I-d") echo "--filter-i-dirty" ;;
-                "I-m") echo "--filter-i-manufacturing" ;;
-                "I-ht") echo "--filter-i-high-tech" ;;
-                "I-r") echo "--filter-i-resource" ;;
+                "R$") ARGS="$ARGS --filter-r-low" ;;
+                "R$$") ARGS="$ARGS --filter-r-med" ;;
+                "R$$$") ARGS="$ARGS --filter-r-high" ;;
+                "CO$$") ARGS="$ARGS --filter-co-med" ;;
+                "CO$$$") ARGS="$ARGS --filter-co-high" ;;
+                "CS$") ARGS="$ARGS --filter-cs-low" ;;
+                "CS$$") ARGS="$ARGS --filter-cs-med" ;;
+                "CS$$$") ARGS="$ARGS --filter-cs-high" ;;
+                "I-d") ARGS="$ARGS --filter-i-dirty" ;;
+                "I-m") ARGS="$ARGS --filter-i-manufacturing" ;;
+                "I-ht") ARGS="$ARGS --filter-i-high-tech" ;;
+                "I-r") ARGS="$ARGS --filter-i-resource" ;;
               esac
-            done > /tmp/filter_args.txt
-            
-            # Read the generated arguments
-            FILTER_ARGS=$(cat /tmp/filter_args.txt | tr '\n' ' ')
-            ARGS="$FILTER_ARGS"
+            done
             
             # Add datpack option if enabled
             [ "$ENABLE_DATPACK" = "true" ] && ARGS="$ARGS --datpack --datpack-output maxis_blockers_specific.dat"
