@@ -87,6 +87,17 @@ jobs:
             cd scripts
             python3 extract_maxis_lots.py
             cd ..
+            
+            # Verify the JSON file was created
+            if [ -f "data/lot_configurations.json" ]; then
+              echo "✓ lot_configurations.json created successfully"
+              echo "File size: $(du -h data/lot_configurations.json)"
+            else
+              echo "✗ ERROR: lot_configurations.json was not created"
+              echo "Contents of data/ directory:"
+              ls -la data/
+              exit 1
+            fi
           fi
       
       - name: Run script to create patch files from JSON
@@ -95,6 +106,15 @@ jobs:
           ZONE_WEALTH_COMBINATIONS: ${{ github.event.inputs.zone_wealth_combinations }}
           ENABLE_DATPACK: ${{ github.event.inputs.enable_datpack }}
         run: |
+          # Verify input JSON file exists before proceeding
+          if [ ! -f "data/lot_configurations.json" ] && [ ! -f "data/custom_lot_configurations.json" ]; then
+            echo "✗ ERROR: No input JSON file found"
+            echo "Looking for: data/lot_configurations.json or data/custom_lot_configurations.json"
+            echo "Contents of data/ directory:"
+            ls -la data/
+            exit 1
+          fi
+          
           # Build command arguments based on selection mode
           if [ "$SELECTION_MODE" = "specific" ]; then
             # Parse zone/wealth combinations from comma-separated input
@@ -133,6 +153,16 @@ jobs:
             
             echo "Running with all zone/wealth combinations (no filters)"
             python3 scripts/create_patches_from_json.py $ARGS
+          fi
+          
+          # Verify output files were created
+          if [ -d "output_patches" ]; then
+            echo "✓ output_patches directory exists"
+            echo "Generated files:"
+            ls -la output_patches/
+          else
+            echo "✗ ERROR: output_patches directory was not created"
+            exit 1
           fi
       
       - name: Check for generated files
