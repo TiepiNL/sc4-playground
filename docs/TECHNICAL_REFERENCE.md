@@ -168,18 +168,20 @@ Offset | Size | Field       | Endianness | Description
 
 ### Layer 4: Target Properties
 
-**LotConfiguration Properties (7 targeted for extraction):**
+**LotConfiguration Properties (9 targeted for extraction):**
 
-*Note: LotConfiguration exemplars may contain additional properties beyond these 7, but our extraction focuses on these core properties for lot analysis and patch generation.*
+*Note: LotConfiguration exemplars may contain additional properties beyond these 9, but our extraction focuses on these core properties for lot analysis and patch generation.*
 
 **Reference:** For comprehensive documentation of all exemplar properties, see [SC4Devotion Exemplar Properties Wiki](https://www.wiki.sc4devotion.com/index.php?title=Exemplar_properties).
 
 | Property | ID | Type | Description | Data Type |
 |----------|----|----|-------------|-----------|
 | ExemplarName | 0x00000020 | String | Lot identifier | UTF-8 string |
-| LotConfigPropertySize | 0x88EDC790 | Array | Lot dimensions | UINT8 array [width, height] |
+| PropertyVersion | 0x88EDC789 | Single | Configuration version | UINT8 (rep:0) |
+| PropertySize | 0x88EDC790 | Array | Lot dimensions | UINT8 array [width, height] |
+| PropertyFamily | 0x88EDC791 | Single | Property family identifier | UINT32 (rep:1) |
 | ZoneTypes | 0x88EDC793 | Array | Zone compatibility | UINT8 array (1-9=zones, 15=all) |
-| ZoneWealth | 0x88EDC795 | Array | Wealth levels | UINT8 array (1=§, 2=§§, 3=§§§) |
+| WealthTypes | 0x88EDC795 | Array | Wealth levels | UINT8 array (1=§, 2=§§, 3=§§§) |
 | PurposeTypes | 0x88EDC796 | Array | Purpose codes | UINT32 array |
 | GrowthStage | 0x27812837 | **Special** | Development stage | UINT8 (rep-encoded) |
 | RoadCornerIndicator | 0x4A4A88F0 | **Special** | Corner placement | UINT8 (rep-encoded) |
@@ -287,7 +289,38 @@ if property_id in special_rep_properties and data_type == 0x0100:
 - Binary data validation: EQZB files show `0x00000020:{"Exemplar Name"}`
 - Correction: `0x88EDC790` is actually "LotConfigPropertySize"
 
-### 4. Case Sensitivity Bug
+### 4. Custom Lot Data Type 0x900 Discovery
+
+**Problem:** Custom building lots (particularly from community creators) contained properties with data type 0x900, causing parser to fail or miss critical properties like ZoneTypes, WealthTypes, and PurposeTypes.
+
+**Investigation Method:** Binary analysis of problematic SC4Lot files revealed data type 0x900 appeared at property offsets where parser would get out of sync.
+
+**Size Determination:** Testing different byte sizes per element:
+
+- 1 byte: Next property header invalid
+- 2 bytes: Next property header invalid  
+- 3 bytes: Next property header invalid
+- **4 bytes: Next property header valid** ✓
+
+**Critical Finding:** Data type 0x900 uses 4 bytes per element (same as 0x300/UINT32).
+
+```python
+# Fixed parser handling
+elif data_type in [0x300, 0x900]:  # Both use 4 bytes per element
+    offset += rep_count * 4
+```
+
+**Impact on Affected Files:**
+
+- CS$$_5x2_AC_Zenit: Fixed missing WealthTypes and PurposeTypes properties
+- 222_TD_CO$$8_3x3: Fixed incorrect ZoneTypes array expansion
+
+**Examples:**
+
+- Before: `ZoneTypes: [2, 3]` (truncated due to parsing error)
+- After: `ZoneTypes: [4, 5, 6], WealthTypes: [2], PurposeTypes: [2]` (complete)
+
+### 5. Case Sensitivity Bug
 
 **Root Cause:** Validation logic used lowercase hex while parser generated uppercase.
 
@@ -697,9 +730,11 @@ def get_property_name(property_id):
     """Convert property ID to human-readable name."""
     property_names = {
         0x00000020: 'ExemplarName',
-        0x88EDC790: 'LotConfigPropertySize',
+        0x88EDC789: 'PropertyVersion',
+        0x88EDC790: 'PropertySize',
+        0x88EDC791: 'PropertyFamily',
         0x88EDC793: 'ZoneTypes',
-        0x88EDC795: 'ZoneWealth',
+        0x88EDC795: 'WealthTypes',
         0x88EDC796: 'PurposeTypes',
         0x27812837: 'GrowthStage',
         0x4A4A88F0: 'RoadCornerIndicator'
@@ -813,9 +848,11 @@ PATCH_GROUP_ID = 0xb03697d1
 # Property IDs
 PROPERTIES = {
     'ExemplarName': 0x00000020,
-    'LotConfigPropertySize': 0x88EDC790,
+    'PropertyVersion': 0x88EDC789,
+    'PropertySize': 0x88EDC790,
+    'PropertyFamily': 0x88EDC791,
     'ZoneTypes': 0x88EDC793,
-    'ZoneWealth': 0x88EDC795,
+    'WealthTypes': 0x88EDC795,
     'PurposeTypes': 0x88EDC796,
     'GrowthStage': 0x27812837,
     'RoadCornerIndicator': 0x4A4A88F0
@@ -828,8 +865,9 @@ REP_ENCODED_PROPERTIES = {0x27812837, 0x4A4A88F0}
 DATA_TYPES = {
     'STRING': 0x0C00,
     'UINT8': 0x0100,
-    'UINT32': 0x0700,
-    'FLOAT32': 0x0900
+    'UINT16': 0x0200, 
+    'UINT32': 0x0300,
+    'UNKNOWN_0x900': 0x0900  # 4-byte elements, found in custom lots (see Critical Parsing Insights)
 }
 ```
 
@@ -875,5 +913,5 @@ DATA_TYPES = {
 
 This technical reference contains all information necessary to recreate and extend the DBPF parsing system. All data structures, algorithms, and critical insights have been validated through production use and comprehensive testing.
 
-**Last Updated:** September 2025  
-**Codebase Version:** Integration-validated production release
+**Last Updated:** December 2025 - Added 0x900 data type discovery, PropertyFamily property, and simplified property naming  
+**Codebase Version:** Integration-validated production release with custom lot support

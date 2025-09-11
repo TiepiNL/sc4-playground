@@ -237,11 +237,11 @@ def write_patch_file(filename: str, patch_instance_id: int, targets: list):
 
 def get_group_name_from_purpose_wealth(zone_purpose, zone_wealth):
     """
-    Generate patch group name based on PurposeTypes and ZoneWealth values.
+    Generate patch group name based on PurposeTypes and WealthTypes values.
     
     Args:
         zone_purpose: PurposeTypes value (single integer)
-        zone_wealth: ZoneWealth value (single integer)
+        zone_wealth: WealthTypes value (single integer)
     
     Returns:
         String representing the group name for the patch file
@@ -384,7 +384,7 @@ def main():
     1. Custom user-provided building packs (custom_lot_configurations.json)
     2. Maxis base game lots (lot_configurations.json)
     
-    Lots are grouped by PurposeTypes and ZoneWealth combinations (e.g., all "CS$$" lots
+    Lots are grouped by PurposeTypes and WealthTypes combinations (e.g., all "CS$$" lots
     go into one patch file) to create manageable, organized patch files.
     """
     # Parse command-line filters
@@ -508,7 +508,7 @@ def main():
         exemplar_name = properties.get('ExemplarName')
         zone_types = properties.get('ZoneTypes')
         zone_purpose = properties.get('PurposeTypes')
-        zone_wealth = properties.get('ZoneWealth')
+        zone_wealth = properties.get('WealthTypes')
         
         # 1. Skip if instance ID is missing
         if not instance_id_str:
@@ -525,7 +525,7 @@ def main():
         # - 0x0D (13): Spaceport zones
         # - 0x0E (14): Landmark zones
         # - 0x0F (15): Civic/Plopped buildings (all zones compatible)
-        # - PurposeTypes=0 + ZoneWealth=0: Ploppable/landmark buildings (not growable RCI)
+        # - PurposeTypes=0 + WealthTypes=0: Ploppable/landmark buildings (not growable RCI)
         excluded_zone_types = {0, 10, 11, 12, 13, 14, 15}  # 0x00, and 0x0A through 0x0F
         
         if zone_types is None:
@@ -546,12 +546,12 @@ def main():
             skipped_no_name += 1
             continue
             
-        # 4. Skip if ZoneWealth is missing or null
+        # 4. Skip if WealthTypes is missing or null
         if zone_wealth is None:
             skipped_invalid_name += 1
             continue
             
-        # 5. For growable zones (ZoneTypes 1-9), validate PurposeTypes and ZoneWealth are not 0
+        # 5. For growable zones (ZoneTypes 1-9), validate PurposeTypes and WealthTypes are not 0
         zone_types_list = zone_types if isinstance(zone_types, list) else [zone_types]
         if any(1 <= zt <= 9 for zt in zone_types_list):
             if zone_purpose == 0:
@@ -559,11 +559,11 @@ def main():
                 skipped_invalid_name += 1
                 continue
             if zone_wealth == 0:
-                print(f"   WARNING: Growable lot with ZoneWealth=0: {exemplar_name}")
+                print(f"   WARNING: Growable lot with WealthTypes=0: {exemplar_name}")
                 skipped_invalid_name += 1
                 continue
 
-        # 5. Handle PurposeTypes and ZoneWealth arrays
+        # 5. Handle PurposeTypes and WealthTypes arrays
         # Extract single values or first value from arrays
         if isinstance(zone_purpose, list):
             if not zone_purpose:  # Empty list - truly missing data
@@ -633,7 +633,7 @@ def main():
     print(f"\nGenerating {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'...")
     print(f"Using starting InstanceID: 0x{STARTING_INSTANCE_ID:08X}")
     print(f"Target lots will have MinSlope set to 89.0° (unbuildable)")
-    print(f"Grouping: By PurposeTypes + ZoneWealth (R/CS/CO/I-* + $/$$/$$$ combinations)")
+    print(f"Grouping: By PurposeTypes + WealthTypes (R/CS/CO/I-* + $/$$/$$$ combinations)")
     print(f"Filtering: ZoneTypes excluding null, 0x0A-0x0F (Military/Airport/Seaport/Spaceport/Landmark/Civic)")
 
     # Generate patch files in alphabetical order for consistency

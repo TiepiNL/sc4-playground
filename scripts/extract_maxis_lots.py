@@ -2,8 +2,17 @@
 """
 MAXIS LOT EXTRACTOR
 
-This implementation uses reference-based parsing for SimCity 4 DBPF files.
-Successfully tested on lot 0x60000474: GrowthStage=6, RoadCornerIndicator=12
+This implementation uses reference-based parsing for SimCity 4 DBPF fi        # Skip unknown types
+        elif values is None:
+            # Just advance offset for unknown types - estimated skip
+            if data_type in [0x100, 0xB00]:
+                offset += rep_count
+            elif data_type == 0x200:
+                offset += rep_count * 2
+            elif data_type in [0x300, 0x900]:  # Both UInt32 - 4 bytes each
+                offset += rep_count * 4
+            elif data_type == 0xC00:
+                offset += rep_countssfully tested on lot 0x60000474: GrowthStage=6, RoadCornerIndicator=12
 
 Based on authoritative sources:
 - ilive's SC4Reader: ALL little-endian
@@ -30,7 +39,7 @@ def parse_exemplar_properties(data):
     PROVEN WORKING on lot 0x60000474:
     - GrowthStage: 6
     - RoadCornerIndicator: 12
-    - ZoneWealth: [2]
+    - WealthTypes: [2]
     
     Structure from authoritative references (ALL little-endian):
     - PropertyID: UInt32 (4 bytes, LE)  
@@ -53,9 +62,11 @@ def parse_exemplar_properties(data):
     properties = {}
     target_props = {
         0x00000020: "ExemplarName",           # CRITICAL: Human-readable lot name
-        0x88EDC790: "LotConfigPropertySize",  # Lot dimensions (width x height)
+        0x88EDC789: "PropertyVersion",        # Configuration version
+        0x88EDC790: "PropertySize",           # Lot dimensions (width x height)
+        0x88EDC791: "PropertyFamily",         # Property family identifier
         0x88EDC793: "ZoneTypes",              # CRITICAL: Zone types (R, C, I, etc.)
-        0x88EDC795: "ZoneWealth",             # Zone wealth levels
+        0x88EDC795: "WealthTypes",             # Zone wealth levels
         0x88EDC796: "PurposeTypes",           # CRITICAL: Purpose types 
         0x27812837: "GrowthStage", 
         0x4A4A88F0: "RoadCornerIndicator"
@@ -130,6 +141,13 @@ def parse_exemplar_properties(data):
                 offset += rep_count * 4
             elif data_type == 0xC00:
                 offset += rep_count
+            elif data_type == 0x900:
+                # New data type found in custom lots - skip 4 bytes per element (like UInt32)
+                offset += rep_count * 4
+            else:
+                # For completely unknown data types, try conservative skip
+                # This prevents parser from getting completely lost
+                offset += rep_count
             
     return properties
 
@@ -191,7 +209,7 @@ def extract_maxis_lots(dbpf_file, output_file):
                 }
                 
                 # Count success based on having at least one target property
-                if any(prop in properties for prop in ['ZoneWealth', 'GrowthStage', 'RoadCornerIndicator']):
+                if any(prop in properties for prop in ['WealthTypes', 'GrowthStage', 'RoadCornerIndicator']):
                     success_count += 1
                 
                 lot_configurations.append(lot_config)
