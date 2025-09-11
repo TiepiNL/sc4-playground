@@ -142,7 +142,12 @@ Generate patches directly from the GitHub web interface without local setup:
 1. Navigate to the **Actions** tab in this repository
 2. Select **Generate SimCity 4 Exemplar Patches**
 3. Click **Run workflow** and configure:
-   - **Data Source**: Choose Maxis base game or custom building pack
+   - **Data Source**: Choose between:
+     - **Maxis base game** (processes SimCity_1.dat with all 1,908 official lots) - leave Google Drive File ID empty
+     - **Custom building pack** (processes user-uploaded ZIP file via Google Drive)
+   - **Google Drive File ID**: Required for custom building packs only. Extract from share URL:
+     - Example: `https://drive.google.com/file/d/1MXgi-_m35Du7xoMhngGDQLznc7npjl29/view?usp=drive_link`
+     - File ID: `1MXgi-_m35Du7xoMhngGDQLznc7npjl29` (the part between `/d/` and `/view`)
    - **Building Selection**: All buildings or specific zone/wealth combinations
    - **Output Format**: Individual files or combined datpack
 4. Download the generated patches from workflow artifacts
