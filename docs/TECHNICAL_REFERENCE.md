@@ -324,7 +324,7 @@ def validate_property_structure(property_id, data_type, rep, padding):
 
 ## Patch File Generation
 
-### Overview
+### Overview {{< /*<!-- markdownlint-disable MD024 -->*/ >}}
 
 Exemplar patches allow selective override of specific properties in existing exemplars without copying the entire exemplar file. This is a general SimCity 4 mechanism that enables targeted modifications while preserving the original exemplar data.
 
@@ -792,7 +792,7 @@ python integration_validation.py --function property_parsing
 - **Extraction Time:** ~1.2 seconds for full SimCity_1.dat
 - **Processing Rate:** ~1,600 lots/second
 - **Memory Usage:** <100MB peak during processing
-- **File Sizes:** 
+- **File Sizes:**
   - Input: SimCity_1.dat (144MB)
   - Output: lot_configurations.json (1.2MB)
   - Patches: 12 files totaling ~150KB

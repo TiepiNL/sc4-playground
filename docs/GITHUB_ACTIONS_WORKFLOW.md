@@ -139,8 +139,9 @@ cache:
 ### Automatic Exclusions
 
 The workflow automatically excludes special building types:
+
 - **Military** (ZoneTypes 10)
-- **Airport** (ZoneTypes 11) 
+- **Airport** (ZoneTypes 11)
 - **Seaport** (ZoneTypes 12)
 - **Spaceport** (ZoneTypes 13)
 - **Landmark** (ZoneTypes 14)
@@ -183,6 +184,7 @@ inputs:
   selection_mode: 'all'
   enable_datpack: false
 ```
+
 **Result**: 12 individual .dat files for all valid zone/wealth combinations
 
 ### Residential Only
