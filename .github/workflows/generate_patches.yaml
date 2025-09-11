@@ -66,12 +66,12 @@ jobs:
             FILE_ID="${{ env.CUSTOM_FILE_ID }}"
             echo "Using custom Google Drive file ID: $FILE_ID"
             echo "Downloading custom building pack archive..."
-            gdown --id "$FILE_ID" --fuzzy -O "data/custom.zip"
+            gdown "$FILE_ID" --fuzzy -O "data/custom.zip"
           else
             FILE_ID="${{ env.GDRIVE_FILE_ID }}"
             echo "Using default SimCity_1.dat file ID: $FILE_ID"
             echo "Downloading SimCity_1.dat archive..."
-            gdown --id "$FILE_ID" --fuzzy -O "data/SimCity_1.dat.zip"
+            gdown "$FILE_ID" --fuzzy -O "data/SimCity_1.dat.zip"
             unzip "data/SimCity_1.dat.zip" -d data/
           fi
       

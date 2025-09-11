@@ -27,10 +27,21 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import qfs
 from extract_maxis_lots import parse_exemplar_properties
 
-# Constants
-CUSTOM_ZIP_PATH = "../data/custom.zip"
-CUSTOM_EXTRACT_DIR = "../data/custom"
-CUSTOM_OUTPUT_JSON = "../data/custom_lot_configurations.json"
+# Constants - Dynamic path resolution for different execution contexts
+def get_data_path(relative_path):
+    """Get correct data path whether running from root or scripts directory."""
+    # Try root directory first (GitHub Actions context)
+    root_path = os.path.join("data", relative_path)
+    if os.path.exists(os.path.dirname(root_path)) or relative_path == "custom.zip":
+        return root_path
+    
+    # Fall back to scripts directory context (local development)
+    scripts_path = os.path.join("..", "data", relative_path)
+    return scripts_path
+
+CUSTOM_ZIP_PATH = get_data_path("custom.zip")
+CUSTOM_EXTRACT_DIR = get_data_path("custom")
+CUSTOM_OUTPUT_JSON = get_data_path("custom_lot_configurations.json")
 EXEMPLAR_FILE_TYPE_ID = 0x6534284A  # DBPF file type for exemplar files
 LOT_CONFIG_GROUP_ID = 0xA8FBD372  # LotConfiguration group ID
 
