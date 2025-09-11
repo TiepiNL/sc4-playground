@@ -221,10 +221,10 @@ def write_patch_file(filename: str, patch_instance_id: int, targets: list):
 
 def get_group_name_from_purpose_wealth(zone_purpose, zone_wealth):
     """
-    Generate patch group name based on ZonePurpose and ZoneWealth values.
+    Generate patch group name based on PurposeTypes and ZoneWealth values.
     
     Args:
-        zone_purpose: ZonePurpose value (single integer)
+        zone_purpose: PurposeTypes value (single integer)
         zone_wealth: ZoneWealth value (single integer)
     
     Returns:
@@ -330,7 +330,7 @@ def main():
     1. Custom user-provided building packs (custom_lot_configurations.json)
     2. Maxis base game lots (lot_configurations.json)
     
-    Lots are grouped by ZonePurpose and ZoneWealth combinations (e.g., all "CS$$" lots
+    Lots are grouped by PurposeTypes and ZoneWealth combinations (e.g., all "CS$$" lots
     go into one patch file) to create manageable, organized patch files.
     """
     # Parse command-line filters
@@ -453,7 +453,7 @@ def main():
             
         exemplar_name = properties.get('ExemplarName')
         zone_types = properties.get('ZoneTypes')
-        zone_purpose = properties.get('ZonePurpose')
+        zone_purpose = properties.get('PurposeTypes')
         zone_wealth = properties.get('ZoneWealth')
         
         # 1. Skip if instance ID is missing
@@ -485,7 +485,7 @@ def main():
             skipped_invalid_zone_types += 1
             continue
             
-        # 3. Skip if ZonePurpose is missing or null
+        # 3. Skip if PurposeTypes is missing or null
         if zone_purpose is None:
             skipped_no_name += 1
             continue
@@ -495,7 +495,7 @@ def main():
             skipped_invalid_name += 1
             continue
 
-        # 5. Handle ZonePurpose and ZoneWealth arrays
+        # 5. Handle PurposeTypes and ZoneWealth arrays
         # Extract single values or first value from arrays
         if isinstance(zone_purpose, list):
             if not zone_purpose:  # Empty list - truly missing data
@@ -548,7 +548,7 @@ def main():
     print(f"\nProcessing Statistics:")
     print(f"   Valid exemplars: {valid_exemplars_found}")
     print(f"   Skipped (invalid ZoneTypes): {skipped_invalid_zone_types}")
-    print(f"   Skipped (no ZonePurpose): {skipped_no_name}")
+    print(f"   Skipped (no PurposeTypes): {skipped_no_name}")
     print(f"   Skipped (no ZoneWealth): {skipped_invalid_name}")
     print(f"   Skipped (invalid Instance ID): {skipped_invalid_iid}")
 
@@ -561,7 +561,7 @@ def main():
     print(f"\nGenerating {len(grouped_targets)} patch files in '{OUTPUT_DIR}/'...")
     print(f"Using starting InstanceID: 0x{STARTING_INSTANCE_ID:08X}")
     print(f"Target lots will have MinSlope set to 89.0° (unbuildable)")
-    print(f"Grouping: By ZonePurpose + ZoneWealth (R/CS/CO/I-* + $/$$/$$$ combinations)")
+    print(f"Grouping: By PurposeTypes + ZoneWealth (R/CS/CO/I-* + $/$$/$$$ combinations)")
     print(f"Filtering: ZoneTypes excluding null, 0x0A-0x0F (Military/Airport/Seaport/Spaceport/Landmark/Civic)")
 
     # Generate patch files in alphabetical order for consistency
