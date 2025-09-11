@@ -84,7 +84,9 @@ jobs:
             python3 scripts/process_custom_dbpf.py
           else
             echo "Processing Maxis base game data from SimCity_1.dat..."
-            python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
+            cd scripts
+            python3 extract_maxis_lots.py
+            cd ..
           fi
       
       - name: Run script to create patch files from JSON
