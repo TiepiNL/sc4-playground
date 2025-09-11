@@ -498,7 +498,7 @@ def main():
         # 5. Handle ZonePurpose and ZoneWealth arrays
         # Extract single values or first value from arrays
         if isinstance(zone_purpose, list):
-            if not zone_purpose:  # Empty list
+            if not zone_purpose:  # Empty list - truly missing data
                 skipped_no_name += 1
                 continue
             purpose_values = zone_purpose
@@ -506,7 +506,7 @@ def main():
             purpose_values = [zone_purpose]
             
         if isinstance(zone_wealth, list):
-            if not zone_wealth:  # Empty list
+            if not zone_wealth:  # Empty list - truly missing data
                 skipped_invalid_name += 1
                 continue
             wealth_values = zone_wealth

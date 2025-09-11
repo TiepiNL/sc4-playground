@@ -25,12 +25,12 @@ from collections import defaultdict
 # Add the scripts directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import qfs
-from extract_maxis_lots import parse_lot_configuration_corrected
+from extract_maxis_lots import parse_exemplar_properties
 
 # Constants
-CUSTOM_ZIP_PATH = "data/custom.zip"
-CUSTOM_EXTRACT_DIR = "data/custom"
-CUSTOM_OUTPUT_JSON = "data/custom_lot_configurations.json"
+CUSTOM_ZIP_PATH = "../data/custom.zip"
+CUSTOM_EXTRACT_DIR = "../data/custom"
+CUSTOM_OUTPUT_JSON = "../data/custom_lot_configurations.json"
 EXEMPLAR_FILE_TYPE_ID = 0x6534284A  # DBPF file type for exemplar files
 LOT_CONFIG_GROUP_ID = 0xA8FBD372  # LotConfiguration group ID
 
@@ -128,8 +128,8 @@ def extract_lot_configurations_from_dbpf(file_path):
                     else:
                         eqzb_data = raw_data
                     
-                    # Parse using corrected structure from extract_maxis_lots.py
-                    properties = parse_lot_configuration_corrected(eqzb_data)
+                    # Parse using reference implementation from extract_maxis_lots.py
+                    properties = parse_exemplar_properties(eqzb_data)
                     
                     lot_config = {
                         'source_file': os.path.basename(file_path),
