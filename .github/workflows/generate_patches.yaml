@@ -142,14 +142,26 @@ jobs:
               esac
             done
             
-            # Add datpack option if enabled
-            [ "$ENABLE_DATPACK" = "true" ] && ARGS="$ARGS --datpack --datpack-output maxis_blockers_specific.dat"
+            # Add datpack option if enabled with data-source-specific filename
+            if [ "$ENABLE_DATPACK" = "true" ]; then
+              if [ "${{ env.DATA_SOURCE }}" = "custom" ]; then
+                ARGS="$ARGS --datpack --datpack-output custom_blockers_specific.dat"
+              else
+                ARGS="$ARGS --datpack --datpack-output maxis_blockers_specific.dat"
+              fi
+            fi
             
             echo "Running with specific zone/wealth filters: $ARGS"
             python3 scripts/create_patches_from_json.py $ARGS
           else
             ARGS=""
-            [ "$ENABLE_DATPACK" = "true" ] && ARGS="$ARGS --datpack --datpack-output maxis_blockers_all.dat"
+            if [ "$ENABLE_DATPACK" = "true" ]; then
+              if [ "${{ env.DATA_SOURCE }}" = "custom" ]; then
+                ARGS="$ARGS --datpack --datpack-output custom_blockers_all.dat"
+              else
+                ARGS="$ARGS --datpack --datpack-output maxis_blockers_all.dat"
+              fi
+            fi
             
             echo "Running with all zone/wealth combinations (no filters)"
             python3 scripts/create_patches_from_json.py $ARGS
@@ -180,7 +192,7 @@ jobs:
             # Check if datpack was enabled and set output accordingly
             if [ "$ENABLE_DATPACK" = "true" ]; then
               echo "datpack_enabled=true" >> $GITHUB_OUTPUT
-              if ls output_patches/*.dat | grep -q "maxis_blockers"; then
+              if ls output_patches/*.dat | grep -q "_blockers"; then
                 echo "Datpacked file found in output_patches/"
               fi
             else
