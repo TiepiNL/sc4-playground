@@ -202,6 +202,11 @@ jobs:
             # List generated files for debugging
             echo "Generated files:"
             ls -la output_patches/
+            
+            # Check if patched lots list was generated
+            if [ -f "output_patches/patched_lots.txt" ]; then
+              echo "✓ patched_lots.txt available (list of blocked lot names)"
+            fi
           fi
       - name: Upload .dat files artifact
         if: steps.check_files.outputs.patches_exist == 'true'
