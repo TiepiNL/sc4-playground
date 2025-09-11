@@ -28,9 +28,9 @@ def parse_exemplar_properties(data):
     Parse exemplar properties using reference implementation structure.
     
     PROVEN WORKING on lot 0x60000474:
-    - GrowthStage: 6 ✅
-    - RoadCornerIndicator: 12 ✅  
-    - ZoneWealth: [2] ✅
+    - GrowthStage: 6
+    - RoadCornerIndicator: 12
+    - ZoneWealth: [2]
     
     Structure from authoritative references (ALL little-endian):
     - PropertyID: UInt32 (4 bytes, LE)  

@@ -9,7 +9,16 @@ to 89.0 degrees, making lots unbuildable.
 Uses the sc4-resource-loading-hooks exemplar patching system:
 - Creates Cohort files with Group ID 0xb03697d1
 - Uses Exemplar Patch Targets property (0x0062e78a) to specify target exemplars
-- Groups related lots by ExemplarName patterns into single patch files
+- Groups related lots by Exemplar        # Exclusion list:
+        # - null: Incomplete lot definitions
+        # - 0 (0x00): Non-growable lots (landmarks, ploppables)
+        # - 0x0A (10): Military zones
+        # - 0x0B (11): Airport zones  
+        # - 0x0C (12): Seaport zones
+        # - 0x0D (13): Spaceport zones
+        # - 0x0E (14): Landmark zones
+        # - 0x0F (15): Civic/Plopped buildings (all zones compatible)
+        excluded_zone_types = {0, 10, 11, 12, 13, 14, 15}  # 0x00, 0x0A through 0x0Frns into single patch files
 - Each patch adds MinSlope=89.0 property to make lots too steep to build on
 
 Input: lot_configurations.json (from extract_maxis_lots.py)
@@ -509,13 +518,15 @@ def main():
         # 2. Skip if ZoneTypes contains values that should be excluded
         # Exclusion list:
         # - null: Incomplete lot definitions
+        # - 0x00 (0): None
         # - 0x0A (10): Military zones
         # - 0x0B (11): Airport zones  
         # - 0x0C (12): Seaport zones
         # - 0x0D (13): Spaceport zones
         # - 0x0E (14): Landmark zones
         # - 0x0F (15): Civic/Plopped buildings (all zones compatible)
-        excluded_zone_types = {10, 11, 12, 13, 14, 15}  # 0x0A through 0x0F
+        # - PurposeTypes=0 + ZoneWealth=0: Ploppable/landmark buildings (not growable RCI)
+        excluded_zone_types = {0, 10, 11, 12, 13, 14, 15}  # 0x00, and 0x0A through 0x0F
         
         if zone_types is None:
             skipped_invalid_zone_types += 1
@@ -539,6 +550,18 @@ def main():
         if zone_wealth is None:
             skipped_invalid_name += 1
             continue
+            
+        # 5. For growable zones (ZoneTypes 1-9), validate PurposeTypes and ZoneWealth are not 0
+        zone_types_list = zone_types if isinstance(zone_types, list) else [zone_types]
+        if any(1 <= zt <= 9 for zt in zone_types_list):
+            if zone_purpose == 0:
+                print(f"   WARNING: Growable lot with PurposeTypes=0: {exemplar_name}")
+                skipped_invalid_name += 1
+                continue
+            if zone_wealth == 0:
+                print(f"   WARNING: Growable lot with ZoneWealth=0: {exemplar_name}")
+                skipped_invalid_name += 1
+                continue
 
         # 5. Handle PurposeTypes and ZoneWealth arrays
         # Extract single values or first value from arrays
@@ -598,7 +621,7 @@ def main():
     print(f"   Valid exemplars: {valid_exemplars_found}")
     print(f"   Skipped (invalid ZoneTypes): {skipped_invalid_zone_types}")
     print(f"   Skipped (no PurposeTypes): {skipped_no_name}")
-    print(f"   Skipped (no ZoneWealth): {skipped_invalid_name}")
+    print(f"   Skipped (invalid wealth/purpose): {skipped_invalid_name}")
     print(f"   Skipped (invalid Instance ID): {skipped_invalid_iid}")
 
     if not grouped_targets:

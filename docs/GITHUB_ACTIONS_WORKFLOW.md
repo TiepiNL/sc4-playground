@@ -7,11 +7,13 @@ The GitHub Actions workflow provides a comprehensive automation system for gener
 ## Workflow Architecture
 
 ### Trigger Mechanism
+
 - **Manual Dispatch Only** (`workflow_dispatch`)
 - Provides interactive UI with dropdown menus and checkboxes
 - No automatic triggers to prevent accidental resource consumption
 
 ### Key Features
+
 1. **Dual Data Sources**: Maxis base game data or custom building packs
 2. **Flexible Selection**: All combinations or user-specified zone/wealth filtering
 3. **Intelligent Caching**: Google Drive files cached by content hash
@@ -21,6 +23,7 @@ The GitHub Actions workflow provides a comprehensive automation system for gener
 ## Input Parameters
 
 ### Data Source Configuration
+
 ```yaml
 data_source:
   type: choice
@@ -34,6 +37,7 @@ custom_file_id:
 ```
 
 ### Zone/Wealth Selection
+
 ```yaml
 selection_mode:
   type: choice
@@ -47,6 +51,7 @@ zone_wealth_combinations:
 ```
 
 ### Output Format
+
 ```yaml
 enable_datpack:
   type: boolean
@@ -57,6 +62,7 @@ enable_datpack:
 ## Technical Implementation
 
 ### Environment Variables
+
 - **GDRIVE_FILE_ID**: Repository variable for Maxis SimCity_1.dat
 - **CUSTOM_FILE_ID**: Runtime variable from user input  
 - **STARTING_MAXIS_IID**: Instance ID seed for cohort generation
@@ -65,6 +71,7 @@ enable_datpack:
 ### Processing Pipeline
 
 #### Stage 1: Data Acquisition
+
 ```bash
 # Maxis Data Path
 gdown --id $GDRIVE_FILE_ID --fuzzy -O "data/SimCity_1.dat.zip"
@@ -75,6 +82,7 @@ gdown --id $CUSTOM_FILE_ID --fuzzy -O "data/custom.zip"
 ```
 
 #### Stage 2: Data Processing
+
 ```bash
 # Maxis Processing
 python3 scripts/extract_maxis_lots.py data/SimCity_1.dat data/lot_configurations.json
@@ -84,6 +92,7 @@ python3 scripts/process_custom_dbpf.py
 ```
 
 #### Stage 3: Patch Generation
+
 ```bash
 # Dynamic argument building based on selection mode
 if [ "$SELECTION_MODE" = "specific" ]; then
@@ -95,6 +104,7 @@ python3 scripts/create_patches_from_json.py $ARGS
 ```
 
 ### Caching Strategy
+
 ```yaml
 cache:
   path: data/${{ env.DAT_FILENAME }}
@@ -102,6 +112,7 @@ cache:
 ```
 
 **Benefits:**
+
 - **Content-based keys**: Different file IDs = different cache entries
 - **Source-aware**: Maxis vs custom data cached separately  
 - **Cross-run persistence**: Identical file IDs reuse cached data
@@ -109,6 +120,7 @@ cache:
 ## Zone/Wealth Mapping
 
 ### Available Combinations
+
 | Input Code | Zone Type | Wealth Level | Filter Argument |
 |------------|-----------|--------------|-----------------|
 | R$ | Residential | Low | `--filter-r-low` |
@@ -125,6 +137,7 @@ cache:
 | I-r | Industrial | Resource | `--filter-i-resource` |
 
 ### Automatic Exclusions
+
 The workflow automatically excludes special building types:
 - **Military** (ZoneTypes 10)
 - **Airport** (ZoneTypes 11) 
@@ -136,18 +149,21 @@ The workflow automatically excludes special building types:
 ## Artifact Generation
 
 ### Naming Convention
-```
+
+```md
 {data_source}-blocker-{selection_mode}-{output_format}
 ```
 
 ### Examples
+
 - `maxis-blocker-all-combinations-individual`
 - `maxis-blocker-specific-selection-datpacked`
 - `custom-blocker-all-combinations-individual`
 - `custom-blocker-specific-selection-datpacked`
 
 ### Content Structure
-```
+
+```md
 output_patches/
 ├── individual files (when datpack=false)
 │   ├── maxis_blocker_R_low.dat
@@ -160,6 +176,7 @@ output_patches/
 ## Usage Examples
 
 ### All Combinations (Default)
+
 ```yaml
 inputs:
   data_source: 'SimCity_1.dat'
@@ -169,6 +186,7 @@ inputs:
 **Result**: 12 individual .dat files for all valid zone/wealth combinations
 
 ### Residential Only
+
 ```yaml
 inputs:
   data_source: 'SimCity_1.dat'
@@ -176,9 +194,11 @@ inputs:
   zone_wealth_combinations: 'R$,R$$,R$$$'
   enable_datpack: true
 ```
+
 **Result**: Single datpacked file containing residential blockers only
 
 ### Custom Building Packs
+
 ```yaml
 inputs:
   data_source: 'custom'
@@ -186,11 +206,13 @@ inputs:
   selection_mode: 'all'
   enable_datpack: false
 ```
+
 **Result**: Individual .dat files for all lots found in custom building packs
 
 ## Error Handling
 
 ### File Generation Validation
+
 ```bash
 if [ -z "$(ls -A output_patches 2>/dev/null)" ]; then
   echo "No patch files were generated."
@@ -199,6 +221,7 @@ fi
 ```
 
 ### Common Failure Scenarios
+
 1. **Invalid Google Drive ID**: Download fails, workflow stops
 2. **Empty zone selection**: No patches generated when using 'specific' mode
 3. **Corrupted DBPF data**: Parsing errors during extraction phase
@@ -207,12 +230,14 @@ fi
 ## Performance Characteristics
 
 ### Resource Usage
+
 - **Runtime**: 2-5 minutes depending on data source and selection
 - **Cache Size**: ~150MB for SimCity_1.dat
 - **Memory Peak**: <500MB during DBPF processing
 - **Output Size**: 50KB - 2MB depending on selection
 
 ### Optimization Features
+
 - **Incremental caching**: Unchanged file IDs skip download
 - **Parallel processing**: Multiple .dat files generated concurrently
 - **Early termination**: Stops on first critical error
@@ -221,6 +246,7 @@ fi
 ## Command Line Equivalents
 
 ### Local Development
+
 ```bash
 # Replicate "all combinations" mode
 python scripts/create_patches_from_json.py
@@ -233,6 +259,7 @@ python scripts/create_patches_from_json.py --datpack --datpack-output custom_nam
 ```
 
 ### Custom Data Processing
+
 ```bash
 # Process custom building packs locally
 python scripts/process_custom_dbpf.py
@@ -241,18 +268,22 @@ python scripts/process_custom_dbpf.py
 python scripts/create_patches_from_json.py --filter-r-high --filter-co-high
 ```
 
-### Blocking Only Commercial Growth  
+### Blocking Only Commercial Growth
+
 Select: CS$, CS$$, CS$$$, CO$$, CO$$$
 
 ### Blocking Only Industrial Growth
+
 Select: I-D, I-M, I-HT, I-R
 
 ### Blocking High Wealth Only
+
 Select: R$$$, CS$$$, CO$$$, I-HT
 
 ## Artifacts
 
 The workflow generates artifacts with descriptive names:
+
 - `maxis-blocker-dat-files-all-combinations` - When using "all" mode
 - `maxis-blocker-dat-files-specific-selection` - When using "specific" mode
 

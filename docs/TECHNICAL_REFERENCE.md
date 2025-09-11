@@ -1,6 +1,6 @@
 # SimCity 4 DBPF Technical Reference
 
-**Complete Guide to DBPF Parsing, Property Extraction, and Patch Generation**
+## Complete Guide to DBPF Parsing, Property Extraction, and Patch Generation
 
 This document provides the definitive technical reference for working with SimCity 4 DBPF (Database Packed File) format. It captures all data structures, parsing algorithms, and file generation techniques discovered through extensive reverse engineering and validation.
 
@@ -25,7 +25,9 @@ This document provides the definitive technical reference for working with SimCi
 ## DBPF File Structure
 
 ### Overview
+
 DBPF (Database Packed File) is the proprietary archive format used by SimCity 4 to store game assets. This format was developed by Maxis/EA and consists of:
+
 - **96-byte header** with metadata
 - **Variable-length data section** containing compressed and/or uncompressed files
 - **Index table** with file locations and identifiers
@@ -34,7 +36,7 @@ DBPF (Database Packed File) is the proprietary archive format used by SimCity 4 
 
 ### DBPF Header (96 bytes)
 
-```
+```md
 Offset | Size | Field              | Endianness | Description
 -------|------|--------------------|------------|------------------
 0      | 4    | Magic              | ASCII      | Always "DBPF"
@@ -53,6 +55,7 @@ Offset | Size | Field              | Endianness | Description
 ```
 
 **Critical Fields for Parsing:**
+
 - **IndexEntryCount** (offset 36): Number of files to process
 - **IndexOffset** (offset 40): Location of index table
 
@@ -60,7 +63,7 @@ Offset | Size | Field              | Endianness | Description
 
 Each index entry is exactly **20 bytes**:
 
-```
+```md
 Offset | Size | Field        | Endianness | Description
 -------|------|--------------|------------|------------------
 0      | 4    | TypeID       | LE         | File type identifier
@@ -73,10 +76,12 @@ Offset | Size | Field        | Endianness | Description
 ### LotConfiguration Identification
 
 **Target Criteria for filtering:**
+
 - `TypeID = 0x6534284A` (Exemplar type)
 - `GroupID = 0xA8FBD372` (LotConfiguration group)
 
 **Production Statistics:**
+
 - SimCity_1.dat contains **60,440+ total entries**  
 - Yields **1,908 LotConfiguration entries** (3.2% of total)
 
@@ -86,7 +91,7 @@ Offset | Size | Field        | Endianness | Description
 
 ### 4-Layer Parsing Architecture
 
-```
+```md
 Layer 1: DBPF File Access     → Locate and read exemplar files
 Layer 2: QFS Decompression    → Extract EQZB container data
 Layer 3: Property Structure   → Parse individual property headers
@@ -115,6 +120,7 @@ for i in range(index_count):
 ### Layer 2: QFS Decompression
 
 **QFS Compression Detection:**
+
 ```python
 raw_data = data[location:location+size]
 
@@ -130,7 +136,8 @@ else:
 **Reference:** For detailed QFS compression algorithm documentation, see [SC4Devotion DBPF Compression Wiki](https://www.wiki.sc4devotion.com/index.php?title=DBPF_Compression).
 
 **EQZB Container Structure:**
-```
+
+```md
 Offset | Size | Description
 -------|------|------------------
 0      | 4    | Magic "EQZB"
@@ -145,7 +152,8 @@ Offset | Size | Description
 ### Layer 3: Property Structure
 
 **Standard Property Header (13 bytes):**
-```
+
+```md
 Offset | Size | Field       | Endianness | Description
 -------|------|-------------|------------|------------------
 0      | 4    | PropertyID  | LE         | Property identifier
@@ -265,6 +273,7 @@ if property_id in special_rep_properties and data_type == 0x0100:
 ```
 
 **Results:**
+
 - Before fix: 0% extraction rate for these properties
 - After fix: 79.8% GrowthStage, 93.9% RoadCornerIndicator extraction
 
@@ -273,6 +282,7 @@ if property_id in special_rep_properties and data_type == 0x0100:
 **Critical Correction:** ExemplarName property ID is `0x00000020`, NOT `0x88EDC790`.
 
 **Evidence Sources:**
+
 - SC4Reader source code: `pPropName = pEx->FindProp(0x20);`
 - Binary data validation: EQZB files show `0x00000020:{"Exemplar Name"}`
 - Correction: `0x88EDC790` is actually "LotConfigPropertySize"
@@ -315,6 +325,7 @@ def validate_property_structure(property_id, data_type, rep, padding):
 ## Patch File Generation
 
 ### Overview
+
 Exemplar patches allow selective override of specific properties in existing exemplars without copying the entire exemplar file. This is a general SimCity 4 mechanism that enables targeted modifications while preserving the original exemplar data.
 
 **Our Use Case:** We leverage this patch system to create "blocker files" that prevent RCI (Residential, Commercial, Industrial) lots from growing by setting MinSlope to 89.0 degrees, making them unbuildable while preserving all other lot properties and custom content compatibility.
@@ -324,7 +335,8 @@ Exemplar patches allow selective override of specific properties in existing exe
 ### Cohort Exemplar Structure
 
 **CQZB Header (20 bytes):**
-```
+
+```md
 Offset | Data | Description
 -------|------|------------------
 0      | "CQZB1###" | Magic signature + version
@@ -332,7 +344,8 @@ Offset | Data | Description
 ```
 
 **Property Structure:**
-```
+
+```md
 Property 1 - ExemplarPatchTargets (0x0062E78A):
 ├── Type Info: 00 03 80 00 (UINT32 array)
 ├── Padding: 00 (required!)
@@ -412,6 +425,7 @@ def generate_instance_id(group_name):
 ```
 
 **Benefits:**
+
 - **Collision Avoidance:** Private range prevents conflicts with official Maxis content
 - **Reproducibility:** Same group name always generates same instance ID
 - **Distribution:** Hash function ensures good distribution across private range
@@ -474,6 +488,7 @@ Lots are grouped by ZonePurpose + ZoneWealth combinations:
 | I-ht$$$ | 8 | 3 | High-tech industrial |
 
 **Filtering Logic:**
+
 - Exclude ZoneTypes: 10-15 (special buildings, landmarks, civic)
 - Require valid ZonePurpose and ZoneWealth
 - Result: 1,734 lots targeted (91% coverage)
@@ -483,9 +498,11 @@ Lots are grouped by ZonePurpose + ZoneWealth combinations:
 ## Datpacking System
 
 ### Purpose
+
 Combine multiple .dat patch files into a single DBPF file for easier installation and management.
 
 ### Process Overview
+
 1. **Read Source Files:** Parse each input .dat file's DBPF structure
 2. **Collect Entries:** Extract all exemplar data and index information
 3. **Detect Conflicts:** Check for duplicate TGI (Type/Group/Instance) combinations
@@ -750,6 +767,7 @@ python integration_validation.py --function property_parsing
 ## Production Statistics
 
 ### Extraction Results
+
 - **Total DBPF Entries:** 60,440+
 - **LotConfigurations Found:** 1,908 (3.2%)
 - **Property Extraction Success:** 100%
@@ -762,13 +780,15 @@ python integration_validation.py --function property_parsing
   - GrowthStage: 79.8% (1,523/1,908)
   - RoadCornerIndicator: 93.9% (1,791/1,908)
 
-### Patch Generation Results  
+### Patch Generation Results
+
 - **Total Lots Processed:** 1,908
 - **Lots Excluded (special buildings):** 174 (9.1%)
 - **Lots Targeted for Patching:** 1,734 (90.9%)
 - **Patch Files Generated:** 12 (one per RCI/wealth combination)
 
 ### Performance Metrics
+
 - **Extraction Time:** ~1.2 seconds for full SimCity_1.dat
 - **Processing Rate:** ~1,600 lots/second
 - **Memory Usage:** <100MB peak during processing
@@ -814,11 +834,13 @@ DATA_TYPES = {
 ```
 
 ### Key Endianness Rules
+
 - **Everything is little-endian EXCEPT:**
   - Rep field in property header (BIG-ENDIAN)
   - Magic signatures (ASCII)
 
 ### Validation Checklist
+
 - [ ] DBPF magic signature = "DBPF"
 - [ ] Index entry count > 0
 - [ ] LotConfiguration count ≈ 1,900
@@ -831,16 +853,19 @@ DATA_TYPES = {
 ## Dependencies
 
 ### Required Modules
+
 - **qfs.py:** QFS decompression (included in codebase)
 - **struct:** Binary data parsing (Python standard library)
 - **json:** Output format (Python standard library)
 
 ### File Requirements
+
 - **Input:** SimCity_1.dat (144MB DBPF file)
 - **Output:** lot_configurations.json (1.2MB extracted data)
 - **Validation:** integration_validation.py (test suite)
 
 ### System Requirements
+
 - **Python:** 3.6+ (for f-strings and type hints)
 - **Memory:** 200MB+ available RAM
 - **Storage:** 200MB+ free space for output files
